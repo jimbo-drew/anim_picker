@@ -5,7 +5,7 @@
 import sys
 
 
-def safe_code_exec(cmd, env=dict()):
+def safe_code_exec(cmd, env={}):
     '''Safely execute code in new namespace with specified dictionary
     '''
     try:

@@ -1,10 +1,14 @@
 # Copyright (c) 2018 Guillaume Barlier
 # This file is part of "anim_picker" and covered by MIT,
 # read LICENSE.md and COPYING.md for details.
-
+# python
 import sys
 import os
+
+# dcc
 from maya import cmds
+
+# anim picker
 import anim_picker
 from handlers import maya_handlers
 from handlers import file_handlers

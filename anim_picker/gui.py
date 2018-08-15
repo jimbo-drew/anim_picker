@@ -12,20 +12,21 @@ from math import sin, cos, pi
 from maya import cmds
 from maya import OpenMayaUI
 
+from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
+
+from mgear.core import pyqt, callbackManager
+from mgear.vendor.Qt import QtCore, QtWidgets, QtOpenGL, QtGui
+
 import anim_picker
 import picker_node
 from handlers import maya_handlers
 from handlers import python_handlers
 
-from handlers import qt_handlers
-from handlers.qt_handlers import QtCore, QtWidgets, QtOpenGL, QtGui
-# from Qt import QtCore, QtWidgets, QtOpenGL, QtGui
-
 from handlers import __EDIT_MODE__
 from handlers import __SELECTION__
 
 # seems to conflicts with maya viewports...
-__USE_OPENGL__ = False
+__USE_OPENGL__ = True
 
 
 # =============================================================================
@@ -42,6 +43,39 @@ def get_images_folder_path():
     '''
     # Get the path to this file
     return os.path.join(get_module_path(), "images")
+
+
+# TODO, add URL opening
+def openUrl(path):
+    url = QtCore.QUrl('http://some.domain.com/path')
+    if not QtGui.QDesktopServices.openUrl(url):
+        pass
+
+
+def select_picker_controls(picker_items, event, modifiers=None):
+    if __EDIT_MODE__.get():
+        return
+    if modifiers:
+        modifiers = modifiers
+    else:
+        modifiers = event.modifiers()
+    modifier = None
+
+    # Shift cases (toggle)
+    if modifiers == QtCore.Qt.ShiftModifier:
+        modifier = "shift"
+
+    # Controls case
+    if modifiers == QtCore.Qt.ControlModifier:
+        modifier = "control"
+
+    # Alt case (remove)
+    if modifiers == QtCore.Qt.AltModifier:
+        modifier = "alt"
+    picker_controls = []
+    for pItem in picker_items:
+        picker_controls.extend(pItem.get_controls())
+    maya_handlers.select_nodes(picker_controls, modifier=modifier)
 
 
 # =============================================================================
@@ -489,8 +523,7 @@ class SnapshotWidget(BackgroundWidget):
     '''Top right character "snapshot" widget, to display character picture
     '''
 
-    def __init__(self,
-                 parent=None):
+    def __init__(self, parent=None):
         BackgroundWidget.__init__(self, parent)
 
         self.setFixedWidth(80)
@@ -500,7 +533,7 @@ class SnapshotWidget(BackgroundWidget):
 
         self.setToolTip("Click here to Open About/Help window")
 
-    def _get_default_snapshot(self, name='undefined'):
+    def _get_default_snapshot(self, name="undefined"):
         '''Return default snapshot
         '''
         # Define image path
@@ -515,11 +548,11 @@ class SnapshotWidget(BackgroundWidget):
     def set_background(self, path=None):
         '''Set character snapshot picture
         '''
-        if not (path and os.path.exists(unicode(path))):
+        if not (path and os.path.exists(path)):
             path = self._get_default_snapshot()
             self.background = None
         else:
-            self.background = unicode(path)
+            self.background = path
 
         # Load image
         image = QtGui.QImage(path)
@@ -949,8 +982,8 @@ class CustomMenuEditDialog(CustomScriptEditDialog):
 class SearchAndReplaceDialog(QtWidgets.QDialog):
     '''Search and replace dialog window
     '''
-    __SEARCH_STR__ = "^L_"
-    __REPLACE_STR__ = "R_"
+    __SEARCH_STR__ = "_L"
+    __REPLACE_STR__ = "_R"
 
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
@@ -1149,9 +1182,9 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         self.setResizeAnchor(self.AnchorViewCenter)
 
         # TODO
-#        # Set selection mode
-#        self.setRubberBandSelectionMode(QtCore.Qt.IntersectsItemBoundingRect)
-#        self.setDragMode(self.RubberBandDrag)
+        # Set selection mode
+        self.setRubberBandSelectionMode(QtCore.Qt.IntersectsItemBoundingRect)
+        self.setDragMode(self.RubberBandDrag)
         self.scene_mouse_origin = QtCore.QPointF()
         self.drag_active = False
         self.pan_active = False
@@ -1171,30 +1204,44 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
                                              self.height() / 2))
 
     def mousePressEvent(self, event):
-        '''Overload to clear selection on empty area
-        '''
+        self.modified_select = False
         QtWidgets.QGraphicsView.mousePressEvent(self, event)
         if event.buttons() == QtCore.Qt.LeftButton:
-            scene_pos = self.mapToScene(event.pos())
-
+            self.scene_mouse_origin = self.mapToScene(event.pos())
             # Get current viewport transformation
             transform = self.viewportTransform()
-
+            scene_pos = self.mapToScene(event.pos())
             # Clear selection if no picker item below mouse
-            if not self.scene().itemAt(scene_pos, transform):
+            polygon_at = self.scene().itemAt(scene_pos, transform) or []
+            if not polygon_at:
+                self.modified_select = False
                 if not event.modifiers():
+                    self.clear_picker_selection()
                     cmds.select(cl=True)
+            else:
+                if not __EDIT_MODE__.get():
+                    self.modified_select = True
+                    picker_at = polygon_at.parent()
+                    select_picker_controls([picker_at], event)
+                else:
+                    if event.modifiers():
+                        # this allows for shift selecting in edit
+                        self.modified_select = False
 
         elif event.buttons() == QtCore.Qt.MidButton:
+            self.setDragMode(self.ScrollHandDrag)
             self.pan_active = True
             self.scene_mouse_origin = self.mapToScene(event.pos())
 
-            # Rubber band selection support
-            # self.scene_mouse_origin = self.mapToScene(event.pos())
-            # self.drag_active = True
-
     def mouseMoveEvent(self, event):
         result = QtWidgets.QGraphicsView.mouseMoveEvent(self, event)
+
+        if event.buttons() == QtCore.Qt.LeftButton:
+            self.drag_active = True
+            # if __EDIT_MODE__.get():
+        #     result = QtWidgets.QGraphicsView.mouseMoveEvent(self, event)
+        # else:
+        #     result = QtWidgets.QGraphicsView.mouseMoveEvent(self, event)
 
         if self.pan_active:
             current_center = self.get_center_pos()
@@ -1207,29 +1254,49 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         return result
 
     def mouseReleaseEvent(self, event):
+        '''Overload to clear selection on empty area
+        '''
         result = QtWidgets.QGraphicsView.mouseReleaseEvent(self, event)
+        if (not self.drag_active and
+            event.button() == QtCore.Qt.LeftButton and not
+                self.modified_select):
+            self.modified_select = False
+            scene_pos = self.mapToScene(event.pos())
+
+            # Get current viewport transformation
+            transform = self.viewportTransform()
+
+            # Clear selection if no picker item below mouse
+            pitcker_at = self.scene().itemAt(scene_pos, transform) or []
+            if not pitcker_at:
+                if not event.modifiers():
+                    self.clear_picker_selection()
+                    cmds.select(cl=True)
+            else:
+                self.select_picker_items([pitcker_at], event)
 
         # Area selection
-        # if (self.drag_active and event.button() == QtCore.Qt.LeftButton):
-        #    scene_drag_end = self.mapToScene(event.pos())
+        if self.drag_active and event.button() == QtCore.Qt.LeftButton:
+            # self.drag_active = False
+            scene_drag_end = self.mapToScene(event.pos())
 
-        #    sel_area = QtCore.QRectF(self.scene_mouse_origin, scene_drag_end)
+            sel_area = QtCore.QRectF(self.scene_mouse_origin, scene_drag_end)
+            transform = self.viewportTransform()
+            if not sel_area.size().isNull():
+                items = self.scene().items(sel_area,
+                                           QtCore.Qt.IntersectsItemShape,
+                                           QtCore.Qt.AscendingOrder,
+                                           deviceTransform=transform)
 
-        #    transform = self.viewportTransform()
-        #    if not sel_area.size().isNull():
-        #        items = self.scene().items(sel_area,
-        #                                   QtCore.Qt.IntersectsItemShape,
-        #                                   QtCore.Qt.AscendingOrder,
-        #                                   deviceTransform=transform)
-
-        #        picker_items = []
-        #        for item in items:
-        #            if not isinstance(item, PickerItem):
-        #                continue
-        #            picker_items.append(item)
-
-        #        print picker_items
-        # self.drag_active = False
+                picker_items = []
+                for item in items:
+                    if not isinstance(item, PickerItem):
+                        continue
+                    picker_items.append(item)
+                if __EDIT_MODE__.get():
+                    self.select_picker_items(picker_items)
+                else:
+                    select_picker_controls(picker_items, event)
 
         # Middle mouse view panning
         if (self.pan_active and event.button() == QtCore.Qt.MidButton):
@@ -1240,7 +1307,8 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
                                            self.scene_mouse_origin)
             self.centerOn(new_center)
             self.pan_active = False
-
+            self.setDragMode(self.RubberBandDrag)
+        self.drag_active = False
         return result
 
     def wheelEvent(self, event):
@@ -1265,14 +1333,18 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         self.scale(factor, factor)
         self.centerOn(center)
 
-    def contextMenuEvent(self, event):
+    def contextMenuEvent(self, event, mapped_pos=None):
         '''Right click menu options
         '''
         # Item area
-        picker_item = self.itemAt(event.pos())
+        picker_item = [item for item in self.get_picker_items()
+                       if item._hovered]
         if picker_item:
             # Run default method that call on childs
-            return QtWidgets.QGraphicsView.contextMenuEvent(self, event)
+            mapped_pos = event.globalPos()
+            evnt_type = QtGui.QContextMenuEvent.Mouse
+            contextEvent = QtGui.QContextMenuEvent(evnt_type, mapped_pos)
+            return picker_item[0].contextMenuEvent(contextEvent)
 
         # Init context menu
         menu = QtWidgets.QMenu(self)
@@ -1316,7 +1388,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         menu.addAction(reset_view_action)
 
         # Open context menu under mouse
-        menu.exec_(self.mapToGlobal(event.pos()))
+        menu.exec_(event.globalPos())
 
     def resizeEvent(self, *args, **kwargs):
         '''Overload to force scale scene content to fit view
@@ -1464,6 +1536,35 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         items.reverse()
 
         return items
+
+    def clear_picker_selection(self):
+        for picker in self.scene().get_picker_items():
+            picker.set_selected_state(False)
+        self.scene().update()
+
+    def select_picker_items(self, picker_items, event=None):
+
+        if event is None:
+            modifiers = None
+        else:
+            modifiers = event.modifiers()
+
+        # Shift cases (toggle)
+        if modifiers == QtCore.Qt.ShiftModifier:
+            for picker in picker_items:
+                picker.set_selected_state(True)
+
+        # Controls case
+        elif modifiers == QtCore.Qt.ControlModifier:
+            for picker in picker_items:
+                picker.set_selected_state(False)
+
+        # Alt case (remove)
+        # elif modifiers == QtCore.Qt.AltModifier:
+        else:
+            self.clear_picker_selection()
+            for picker in picker_items:
+                picker.set_selected_state(True)
 
     def get_data(self):
         '''Return view data
@@ -1784,7 +1885,7 @@ class Polygon(DefaultPolygon):
     than QtWidgets.QGraphicsItem for signal support)
     '''
     __DEFAULT_COLOR__ = QtGui.QColor(200, 200, 200, 180)
-    __DEFAULT_SELECT_COLOR__ = QtGui.QColor(0, 30, 0, 180)
+    __DEFAULT_SELECT_COLOR__ = QtGui.QColor(100, 214, 138, 180)
 
     def __init__(self, parent=None, points=[], color=None):
 
@@ -2135,7 +2236,7 @@ class PickerItem(DefaultPolygon):
         '''
         return self.handles
 
-    def set_handles(self, handles=list()):
+    def set_handles(self, handles=[]):
         '''Set polygon handles points
         '''
         # Remove existing handles
@@ -2182,11 +2283,32 @@ class PickerItem(DefaultPolygon):
             self.setToolTip(text)
         DefaultPolygon.hoverEnterEvent(self, event)
 
+    def mouseMoveEvent_offset(self, event):
+        self.setPos(event.scenePos() + self.cursor_delta)
+
+    def mouseMoveEvent(self, event):
+        # print event.pos()
+        gfx_event = event
+        if event.buttons() == QtCore.Qt.LeftButton and __EDIT_MODE__.get():
+            if self.currently_selected:
+                [item.mouseMoveEvent_offset(event) for item in
+                 self.currently_selected]
+        super(PickerItem, self).mouseMoveEvent(gfx_event)
+
     def mousePressEvent(self, event):
         '''Event called on mouse press
         '''
         # Simply run default event in edit mode, and exit
         if __EDIT_MODE__.get():
+            self.get_delta_from_point(event.pos())
+            # this allows for maintaining offset while dragging multiple
+            self.currently_selected = [item for item in self.parent().get_picker_items()
+                                       if item.polygon.selected]
+            if self.currently_selected:
+                if self in self.currently_selected:
+                    self.currently_selected.remove(self)
+                [item.get_delta_from_point(event.scenePos()) for item in
+                    self.currently_selected]
             return DefaultPolygon.mousePressEvent(self, event)
 
         # Run selection on left mouse button event
@@ -2196,20 +2318,30 @@ class PickerItem(DefaultPolygon):
                 self.mouse_press_custom_action(event)
             # Run default selection action
             else:
-                self.mouse_press_select_event(event)
+                select_picker_controls([self], event, modifiers=None)
 
         # Set focus to maya window
-        maya_window = qt_handlers.get_maya_window()
+        maya_window = pyqt.maya_main_window()
         if maya_window:
             maya_window.setFocus()
 
-    def mouse_press_select_event(self, event):
+    # def mouseReleaseEvent(self, event):
+    #     if event.buttons() == QtCore.Qt.LeftButton:
+    #         DefaultPolygon.mouseReleaseEvent(self, event)
+
+    def mouse_press_select_event(self, event, modifiers=None):
         '''
         Default select event on mouse press.
         Will select associated controls
         '''
         # Get keyboard modifier
-        modifiers = event.modifiers()
+        # Simply run default event in edit mode, and exit
+        if __EDIT_MODE__.get():
+            return
+        if modifiers:
+            modifiers = modifiers
+        else:
+            modifiers = event.modifiers()
         modifier = None
 
         # Shift cases (toggle)
@@ -2356,11 +2488,9 @@ class PickerItem(DefaultPolygon):
 
         # Open context menu under mouse
         # offset position to prevent accidental mouse release on menu
-        offseted_pos = event.pos() + QtCore.QPointF(5, 0)
-        scene_pos = self.mapToScene(offseted_pos)
-        view_pos = self.parent().mapFromScene(scene_pos)
-        screen_pos = self.parent().mapToGlobal(view_pos)
-        menu.exec_(screen_pos)
+        # OFFSET
+        offseted_pos = event.pos() + QtCore.QPoint(5, 0)
+        menu.exec_(offseted_pos)
 
     def default_context_menu(self, event):
         '''Context menu (right click) out of edition mode (animation)
@@ -2384,11 +2514,11 @@ class PickerItem(DefaultPolygon):
 
         # Open context menu under mouse
         # offset position to prevent accidental mouse release on menu
-        offseted_pos = event.pos() + QtCore.QPointF(5, 0)
-        scene_pos = self.mapToScene(offseted_pos)
-        view_pos = self.parent().mapFromScene(scene_pos)
-        screen_pos = self.parent().mapToGlobal(view_pos)
-        menu.exec_(screen_pos)
+        offseted_pos = event.pos() + QtCore.QPoint(5, 0)
+        # scene_pos = self.mapToScene(offseted_pos)
+        # view_pos = self.parent().mapFromScene(scene_pos)
+        # screen_pos = self.parent().mapToGlobal(view_pos)
+        menu.exec_(offseted_pos)
 
     def get_exec_env(self):
         '''
@@ -2548,6 +2678,10 @@ class PickerItem(DefaultPolygon):
         self.setParent(None)
         self.deleteLater()
 
+    def get_delta_from_point(self, point):
+        self.cursor_delta = self.pos() - point
+        return self.cursor_delta
+
     # =========================================================================
     # Ducplicate and mirror methods ---
     def mirror_position(self):
@@ -2648,7 +2782,7 @@ class PickerItem(DefaultPolygon):
         '''
         return self.namespace
 
-    def set_control_list(self, ctrls=list()):
+    def set_control_list(self, ctrls=[]):
         '''Update associated control list
         '''
         self.controls = ctrls
@@ -2658,14 +2792,14 @@ class PickerItem(DefaultPolygon):
         '''
         # Returned controls without namespace (as data stored)
         if not with_namespace:
-            return list(self.controls)
+            return self.controls
 
         # Get namespace
         namespace = self.get_namespace()
 
         # No namespace, return nodes
         if not namespace:
-            return list(self.controls)
+            return self.controls
 
         # Prefix nodes with namespace
         nodes = []
@@ -2697,8 +2831,8 @@ class PickerItem(DefaultPolygon):
         # Parse controls
         node_missing = False
         controls = self.get_controls()[:]
-        for i in range(len(controls)):
-            controls[i] = re.sub(search, replace, controls[i])
+        for i, ctrl in enumerate(controls):
+            controls[i] = re.sub(search, replace, ctrl)
             if not cmds.objExists(controls[i]):
                 node_missing = True
 
@@ -4003,20 +4137,17 @@ class AboutOverlayWidget(OverlayWidget):
         return text
 
 
-class MainDockWindow(QtWidgets.QDockWidget):
+class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
     __OBJ_NAME__ = "ctrl_picker_window"
     __TITLE__ = "Anim Picker"
 
-    def __init__(self, parent=qt_handlers.get_maya_window(), edit=False):
+    def __init__(self, parent=pyqt.maya_main_window(), edit=False):
+        super(MainDockWindow, self).__init__(parent=parent)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
         self.ready = False
 
-        '''init pyqt4 GUI'''
-        QtWidgets.QDockWidget.__init__(self, parent)
-
-        self.parent = parent
-
         # Window size
-        # (default size to provide a 450/700 for tab area and propoer img size)
+        # (default size to provide a 450/700 for tab area and proper img size)
         self.default_width = 476
         self.default_height = 837
 
@@ -4028,47 +4159,30 @@ class MainDockWindow(QtWidgets.QDockWidget):
         __EDIT_MODE__.set_init(edit)
 
         # Setup ui
+        self.cb_manager = callbackManager.CallbackManager()
         self.setup()
 
     def setup(self):
         '''Setup interface
         '''
         # Main window setting
-        self.setObjectName(self.__OBJ_NAME__)
+        # Setting object name makes docking not useable? da fuck
+        # self.setObjectName(self.__OBJ_NAME__)
         self.setWindowTitle(self.__TITLE__)
         self.resize(self.default_width, self.default_height)
 
-        self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
-                             QtCore.Qt.RightDockWidgetArea)
-        self.setFeatures(QtWidgets.QDockWidget.DockWidgetFloatable |
-                         QtWidgets.QDockWidget.DockWidgetMovable |
-                         QtWidgets.QDockWidget.DockWidgetClosable)
-
-        # Add to maya window for proper behavior
-        maya_window = qt_handlers.get_maya_window()
-        maya_window.addDockWidget(QtCore.Qt.RightDockWidgetArea, self)
-        self.setFloating(True)
-
         # Add main widget and vertical layout
-        self.main_widget = QtWidgets.QWidget(self)
-        self.main_vertical_layout = QtWidgets.QVBoxLayout(self.main_widget)
+        self.main_vertical_layout = QtWidgets.QVBoxLayout()
+        self.setLayout(self.main_vertical_layout)
 
         # Add window fields
         self.add_character_selector()
         self.add_tab_widget()
         self.add_overlays()
 
-        # Add main widget to window
-        self.setWidget(self.main_widget)
-
         # Creating is done (workaround for signals being fired
         # off before everything is created)
         self.ready = True
-
-        # Add docking event signal
-        # self.connect(self,
-        #              QtCore.SIGNAL('topLevelChanged(bool)'),
-        #              self.dock_event)
 
     def reset_default_size(self):
         '''Reset window size to default
@@ -4107,7 +4221,8 @@ class MainDockWindow(QtWidgets.QDockWidget):
         # Add horizont spacer
         spacer = QtWidgets.QSpacerItem(10,
                                        0,
-                                       QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+                                       QtWidgets.QSizePolicy.Expanding,
+                                       QtWidgets.QSizePolicy.Minimum)
         btns_layout.addItem(spacer)
 
         # About btn
@@ -4177,11 +4292,11 @@ class MainDockWindow(QtWidgets.QDockWidget):
         '''
         return self.tab_widget.get_all_picker_items()
 
-    def closeEvent(self, *args, **kwargs):
+    def close(self):
         '''Overwriting close event to close child windows too
         '''
         # Delete script jobs
-        self.kill_script_jobs()
+        self.cb_manager.removeAllManagedCB()
 
         # Close childs
         for child in self.childs:
@@ -4200,7 +4315,12 @@ class MainDockWindow(QtWidgets.QDockWidget):
                 pass
 
         # Default close
-        QtWidgets.QDockWidget.closeEvent(self, *args, **kwargs)
+        work_name = "{}WorkspaceControl".format(self.objectName)
+        try:
+            cmds.workspaceControl(work_name, e=True, close=True)
+        except RuntimeError:
+            pass
+        super(MainDockWindow, self).close()
 
     def showEvent(self, *args, **kwargs):
         '''Default showEvent overload
@@ -4210,13 +4330,13 @@ class MainDockWindow(QtWidgets.QDockWidget):
             return
 
         # Default close
-        QtWidgets.QDockWidget.showEvent(self, *args, **kwargs)
+        super(MainDockWindow, self).showEvent(*args, **kwargs)
 
         # Force char load
         self.refresh()
 
         # Add script jobs
-        self.add_script_jobs()
+        self.add_callback()
 
     def resizeEvent(self, event):
         '''Resize about overlay on resize event
@@ -4225,8 +4345,8 @@ class MainDockWindow(QtWidgets.QDockWidget):
         if not self.ready:
             return
 
-        size = self.main_widget.size()
-        pos = self.main_widget.pos()
+        size = self.size()
+        pos = self.pos()
 
         self.about_widget.resize(size)
         self.about_widget.move(pos)
@@ -4234,7 +4354,7 @@ class MainDockWindow(QtWidgets.QDockWidget):
         self.save_widget.resize(size)
         self.save_widget.move(pos)
 
-        return QtWidgets.QDockWidget.resizeEvent(self, event)
+        return super(MainDockWindow, self).resizeEvent(event)
 
     def show_about_infos(self):
         '''Open animation picker about and help infos
@@ -4477,42 +4597,20 @@ class MainDockWindow(QtWidgets.QDockWidget):
 
     # =========================================================================
     # Script jobs handling ---
-    def add_script_jobs(self):
+    def add_callback(self):
         '''Will add maya scripts job events
         '''
         # Clear any existing scrip jobs
-        self.kill_script_jobs()
-
-        # Get current UI maya_name
-        ui_id = qt_handlers.unwrap_instance(self)
-        ui_name = OpenMayaUI.MQtUtil.fullName(long(ui_id))
+        self.cb_manager.removeAllManagedCB()
 
         # Add selection change event
-        job_id = cmds.scriptJob(p=ui_name,
-                                cu=True,
-                                kws=False,
-                                e=["SelectionChanged",
-                                   self.selection_change_event])
-        self.script_jobs.append(job_id)
-
+        self.cb_manager.selectionChangedCB("anim_picker_selection",
+                                           self.selection_change_event)
         # Add scene open event
-        job_id = cmds.scriptJob(p=ui_name,
-                                kws=False,
-                                e=["SceneOpened",
-                                   self.selection_change_event])
+        self.cb_manager.newSceneCB("anim_picker_newScene",
+                                   self.selection_change_event)
 
-        self.script_jobs.append(job_id)
-
-    def kill_script_jobs(self):
-        '''Will kill any associated script job
-        '''
-        for job_id in self.script_jobs:
-            if not cmds.scriptJob(ex=job_id):
-                continue
-            cmds.scriptJob(k=job_id, f=True)
-        self.script_jobs = []
-
-    def selection_change_event(self):
+    def selection_change_event(self, *args):
         '''
         Event called with a script job from maya on selection change.
         Will properly parse poly_ctrls associated node, and set border
@@ -4533,23 +4631,24 @@ class MainDockWindow(QtWidgets.QDockWidget):
 # =============================================================================
 # Load user interface function
 # =============================================================================
-def load(edit=False, multi=False):
-    '''Load anim_picker ui window
-    '''
-    # Return existing window if not multi option
-    # Force multi in edit mode to prevent locked window issues
+def load(edit=False, dockable=True):
+    """To launch the ui and not get the same instance
 
-    # Init UI
-    dock_widget = MainDockWindow(parent=qt_handlers.get_maya_window(),
-                                 edit=edit)
+    Returns:
+        Anim_picker: instance
 
-    # Show ui
-    dock_widget.show()
-    dock_widget.raise_()
+    Args:
+        edit (bool, optional): Description
+        dockable (bool, optional): Description
 
-    return dock_widget
-
-
-# Load on exec
-# if __name__ == "__main__":
-#     load()
+    """
+    global ANIM_PKR_UI
+    if 'ANIM_PKR_UI' in globals():
+        try:
+            ANIM_PKR_UI.close()
+            ANIM_PKR_UI.deleteLater()
+        except TypeError:
+            pass
+    ANIM_PKR_UI = MainDockWindow(parent=None, edit=edit)
+    ANIM_PKR_UI.show(dockable=True)
+    return ANIM_PKR_UI
