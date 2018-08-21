@@ -19,6 +19,7 @@ from mgear.vendor.Qt import QtCore, QtWidgets, QtOpenGL, QtGui
 
 import anim_picker
 import picker_node
+from widgets import picker_widgets
 from handlers import maya_handlers
 from handlers import python_handlers
 
@@ -355,7 +356,7 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
                 continue
             widget.fit_scene_content()
 
-    def rename_event(self, event):
+    def rename_event(self):
         '''Will open dialog to rename tab
         '''
         # Get current tab index
@@ -1136,6 +1137,47 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
             picker_items.append(item)
         return picker_items
 
+    def picker_at(self, scene_pos, transform):
+        item_at = self.itemAt(scene_pos, transform)
+        if isinstance(item_at, PickerItem):
+            return item_at
+        elif item_at and not isinstance(item_at, PickerItem):
+            return item_at.parentItem()
+        else:
+            return None
+
+    def get_selected_items(self):
+        return [item for item in self.get_picker_items()
+                if item.polygon.selected]
+
+    def clear_picker_selection(self):
+        for picker in self.get_picker_items():
+            picker.set_selected_state(False)
+        self.update()
+
+    def select_picker_items(self, picker_items, event=None):
+        if event is None:
+            modifiers = None
+        else:
+            modifiers = event.modifiers()
+
+        # Shift cases (toggle)
+        if modifiers == QtCore.Qt.ShiftModifier:
+            for picker in picker_items:
+                picker.set_selected_state(True)
+
+        # Controls case
+        elif modifiers == QtCore.Qt.ControlModifier:
+            for picker in picker_items:
+                picker.set_selected_state(False)
+
+        # Alt case (remove)
+        # elif modifiers == QtCore.Qt.AltModifier:
+        else:
+            self.clear_picker_selection()
+            for picker in picker_items:
+                picker.set_selected_state(True)
+
     def set_z_value(self, item):
         '''set proper z index for item
         '''
@@ -1205,6 +1247,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
     def mousePressEvent(self, event):
         self.modified_select = False
+        self.item_selected = False
         QtWidgets.QGraphicsView.mousePressEvent(self, event)
         if event.buttons() == QtCore.Qt.LeftButton:
             self.scene_mouse_origin = self.mapToScene(event.pos())
@@ -1212,18 +1255,18 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             transform = self.viewportTransform()
             scene_pos = self.mapToScene(event.pos())
             # Clear selection if no picker item below mouse
-            polygon_at = self.scene().itemAt(scene_pos, transform) or []
-            if not polygon_at:
+            picker_at = self.scene().picker_at(scene_pos, transform) or []
+            if not picker_at:
                 self.modified_select = False
                 if not event.modifiers():
-                    self.clear_picker_selection()
+                    self.scene().clear_picker_selection()
                     cmds.select(cl=True)
             else:
                 if not __EDIT_MODE__.get():
                     self.modified_select = True
-                    picker_at = polygon_at.parent()
                     select_picker_controls([picker_at], event)
                 else:
+                    self.item_selected = True
                     if event.modifiers():
                         # this allows for shift selecting in edit
                         self.modified_select = False
@@ -1236,7 +1279,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
     def mouseMoveEvent(self, event):
         result = QtWidgets.QGraphicsView.mouseMoveEvent(self, event)
 
-        if event.buttons() == QtCore.Qt.LeftButton:
+        if event.buttons() == QtCore.Qt.LeftButton and not self.item_selected:
             self.drag_active = True
             # if __EDIT_MODE__.get():
         #     result = QtWidgets.QGraphicsView.mouseMoveEvent(self, event)
@@ -1267,13 +1310,13 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             transform = self.viewportTransform()
 
             # Clear selection if no picker item below mouse
-            pitcker_at = self.scene().itemAt(scene_pos, transform) or []
-            if not pitcker_at:
+            picker_at = self.scene().picker_at(scene_pos, transform) or []
+            if not picker_at:
                 if not event.modifiers():
-                    self.clear_picker_selection()
+                    self.scene().clear_picker_selection()
                     cmds.select(cl=True)
             else:
-                self.select_picker_items([pitcker_at], event)
+                self.scene().select_picker_items([picker_at], event)
 
         # Area selection
         if self.drag_active and event.button() == QtCore.Qt.LeftButton:
@@ -1294,7 +1337,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
                         continue
                     picker_items.append(item)
                 if __EDIT_MODE__.get():
-                    self.select_picker_items(picker_items)
+                    self.scene().select_picker_items(picker_items)
                 else:
                     select_picker_controls(picker_items, event)
 
@@ -1331,7 +1374,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         '''Zoom by factor and keep "center" in view
         '''
         self.scale(factor, factor)
-        self.centerOn(center)
+        # self.centerOn(center)
 
     def contextMenuEvent(self, event, mapped_pos=None):
         '''Right click menu options
@@ -1536,35 +1579,6 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         items.reverse()
 
         return items
-
-    def clear_picker_selection(self):
-        for picker in self.scene().get_picker_items():
-            picker.set_selected_state(False)
-        self.scene().update()
-
-    def select_picker_items(self, picker_items, event=None):
-
-        if event is None:
-            modifiers = None
-        else:
-            modifiers = event.modifiers()
-
-        # Shift cases (toggle)
-        if modifiers == QtCore.Qt.ShiftModifier:
-            for picker in picker_items:
-                picker.set_selected_state(True)
-
-        # Controls case
-        elif modifiers == QtCore.Qt.ControlModifier:
-            for picker in picker_items:
-                picker.set_selected_state(False)
-
-        # Alt case (remove)
-        # elif modifiers == QtCore.Qt.AltModifier:
-        else:
-            self.clear_picker_selection()
-            for picker in picker_items:
-                picker.set_selected_state(True)
 
     def get_data(self):
         '''Return view data
@@ -2302,7 +2316,8 @@ class PickerItem(DefaultPolygon):
         if __EDIT_MODE__.get():
             self.get_delta_from_point(event.pos())
             # this allows for maintaining offset while dragging multiple
-            self.currently_selected = [item for item in self.parent().get_picker_items()
+            self.currently_selected = [item for item in
+                                       self.parent().get_picker_items()
                                        if item.polygon.selected]
             if self.currently_selected:
                 if self in self.currently_selected:
@@ -2456,18 +2471,18 @@ class PickerItem(DefaultPolygon):
 
         # Duplicate options
         duplicate_action = QtWidgets.QAction("Duplicate", None)
-        duplicate_action.triggered.connect(self.duplicate)
+        duplicate_action.triggered.connect(self.duplicate_selected)
         menu.addAction(duplicate_action)
 
         mirror_dup_action = QtWidgets.QAction("Duplicate/mirror", None)
-        mirror_dup_action.triggered.connect(self.duplicate_and_mirror)
+        mirror_dup_action.triggered.connect(self.duplicate_and_mirror_selected)
         menu.addAction(mirror_dup_action)
 
         menu.addSeparator()
 
         # Delete
         remove_action = QtWidgets.QAction("Remove", None)
-        remove_action.triggered.connect(self.remove)
+        remove_action.triggered.connect(self.remove_selected)
         menu.addAction(remove_action)
 
         menu.addSeparator()
@@ -2673,6 +2688,12 @@ class PickerItem(DefaultPolygon):
         '''
         self.setPos(0, 0)
 
+    def remove_selected(self):
+        selected_pickers = self.scene().get_selected_items()
+        if self not in selected_pickers:
+            selected_pickers.append(self)
+        [picker.remove() for picker in selected_pickers]
+
     def remove(self):
         self.scene().removeItem(self)
         self.setParent(None)
@@ -2705,6 +2726,18 @@ class PickerItem(DefaultPolygon):
                                  alpha=old_color.alpha())
         self.set_color(new_color)
 
+    def duplicate_selected(self, *args, **kwargs):
+        selected_pickers = self.scene().get_selected_items()
+        if self not in selected_pickers:
+            selected_pickers.append(self)
+        new_pickers = []
+        for picker in selected_pickers:
+            new_picker = picker.duplicate()
+            new_pos = QtCore.QPointF(picker.pos().x() * .9, picker.pos().y() * .9)
+            new_picker.setPos(new_pos)
+            new_pickers.append(new_picker)
+        self.scene().select_picker_items(new_pickers)
+
     def duplicate(self, *args, **kwargs):
         '''Will create a new picker item and copy data over.
         '''
@@ -2719,7 +2752,24 @@ class PickerItem(DefaultPolygon):
 
         return new_item
 
-    def duplicate_and_mirror(self):
+    def duplicate_and_mirror_selected(self):
+        selected_pickers = self.scene().get_selected_items()
+        if self not in selected_pickers:
+            selected_pickers.append(self)
+
+        search = None
+        replace = None
+        new_pickers = []
+        for picker in selected_pickers:
+            if picker.get_controls() and not search and not replace:
+                search, replace, ok = SearchAndReplaceDialog.get()
+                if not ok:
+                    break
+            new_picker = picker.duplicate_and_mirror(search, replace)
+            new_pickers.append(new_picker)
+        self.scene().select_picker_items(new_pickers)
+
+    def duplicate_and_mirror(self, search=None, replace=None):
         '''Duplicate and mirror picker item
         '''
         new_item = self.duplicate()
@@ -2727,7 +2777,8 @@ class PickerItem(DefaultPolygon):
         new_item.mirror_position()
         new_item.mirror_shape()
         if self.get_controls():
-            new_item.search_and_replace_controls()
+            new_item.search_and_replace_controls(search=search,
+                                                 replace=replace)
         return new_item
 
     def copy_event(self):
@@ -2820,11 +2871,21 @@ class PickerItem(DefaultPolygon):
             return
         self.controls.remove(ctrl)
 
-    def search_and_replace_controls(self):
+    def search_and_replace_controls(self, search=None, replace=None):
         '''Will search and replace in associated controls names
+
+        Args:
+            search (str, optional): search string
+            replace (str, optional): what to replace with
+
+        Returns:
+            Bool: if successful
         '''
         # Open Search and replace dialog window
-        search, replace, ok = SearchAndReplaceDialog.get()
+        ok = True
+        if not search or not replace:
+            search, replace, ok = SearchAndReplaceDialog.get()
+
         if not ok:
             return False
 
@@ -3010,11 +3071,6 @@ class HandlesPositionWindow(QtWidgets.QMainWindow):
         self.setObjectName(self.__OBJ_NAME__)
         self.setWindowTitle(self.__TITLE__)
         self.resize(self.__DEFAULT_WIDTH__, self.__DEFAULT_HEIGHT__)
-
-        # Set size policies
-        # sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        # sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-        # self.setSizePolicy(sizePolicy)
 
         # Create main widget
         self.main_widget = QtWidgets.QWidget(self)
@@ -4180,6 +4236,10 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         self.add_tab_widget()
         self.add_overlays()
 
+        # TODO remove temporary addition of the space otpions
+        self.spaces_widget = picker_widgets.SpaceSwitcher()
+        self.main_vertical_layout.addWidget(self.spaces_widget)
+        self.spaces_widget.set_tab_widget(self.tab_widget)
         # Creating is done (workaround for signals being fired
         # off before everything is created)
         self.ready = True
@@ -4647,7 +4707,7 @@ def load(edit=False, dockable=True):
         try:
             ANIM_PKR_UI.close()
             ANIM_PKR_UI.deleteLater()
-        except TypeError:
+        except Exception:
             pass
     ANIM_PKR_UI = MainDockWindow(parent=None, edit=edit)
     ANIM_PKR_UI.show(dockable=True)
