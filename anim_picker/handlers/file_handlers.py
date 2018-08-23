@@ -8,28 +8,7 @@ import json
 from mgear.core import pyqt
 from mgear.vendor.Qt import QtWidgets
 
-# TO BE REMOVED ---------------------------------------------------------------
-
-
-def promptAcceptance(parent, descriptionA, descriptionB):
-    """Warn user, asking for permission
-
-    Args:
-        parent (QWidget): to be parented under
-        descriptionA (str): info
-        descriptionB (str): further info
-
-    Returns:
-        QtCore.Response: accept, deline, reject
-    """
-    msgBox = QtWidgets.QMessageBox(parent)
-    msgBox.setText(descriptionA)
-    msgBox.setInformativeText(descriptionB)
-    msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok |
-                              QtWidgets.QMessageBox.Cancel)
-    msgBox.setDefaultButton(QtWidgets.QMessageBox.Cancel)
-    decision = msgBox.exec_()
-    return decision
+from anim_picker.widgets import basic
 
 
 # i/o -------------------------------------------------------------------------
@@ -70,9 +49,9 @@ def write_data_file(file_path, data={}, force=False):
     '''
     # Ask for confirmation on existing file
     if os.path.exists(file_path) and not force:
-        decision = promptAcceptance(pyqt.maya_main_window(),
-                                    "File already exists! Overwrite?",
-                                    "YOU SURE?")
+        decision = basic.promptAcceptance(pyqt.maya_main_window(),
+                                          "File already exists! Overwrite?",
+                                          "YOU SURE?")
         if decision in [QtWidgets.QMessageBox.Discard,
                         QtWidgets.QMessageBox.Cancel]:
             return

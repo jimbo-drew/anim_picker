@@ -7,7 +7,18 @@ reload(gui)
 __version__ = "1.0.4"
 
 
+# =============================================================================
+# Load user interface function
+# =============================================================================
 def load(edit=False, dockable=True):
-    '''Fast load method
-    '''
+    """To launch the ui and not get the same instance
+
+    Returns:
+        Anim_picker: instance
+
+    Args:
+        edit (bool, optional): Description
+        dockable (bool, optional): Description
+
+    """
     return gui.load(edit=edit, dockable=dockable)

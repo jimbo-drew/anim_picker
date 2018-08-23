@@ -52,14 +52,12 @@ def get_node_for_object(item):
             data_node = DataNode(data_node)
             if data_node.countains(item.replace(namespace[1:], '')):
                 return data_node
-    return None
+    return False
 
 
 # =============================================================================
 # classes
 # =============================================================================
-
-
 class DataNode():
     # Pipeline
     __NODE__ = "PICKER_DATAS"
@@ -272,8 +270,10 @@ class DataNode():
         related controls data
         '''
         for tab_data in self.data["tabs"]:
-            for item_data in tab_data[1]:
-                controls = item_data.get("controls", {})
+            for item_data in tab_data.get("data", {}).get("items", []):
+                if not item_data:
+                    continue
+                controls = item_data.get("controls", [])
                 controls = maya_handlers.get_flattened_nodes(controls)
                 if controls.count(node):
                     return True
