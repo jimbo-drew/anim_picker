@@ -9,7 +9,7 @@ import os
 from maya import cmds
 
 # anim picker
-import anim_picker
+import mgear.anim_picker
 from handlers import maya_handlers
 from handlers import file_handlers
 
@@ -283,7 +283,7 @@ class DataNode():
         '''Set node data version attribute
         '''
         if not version:
-            version = anim_picker.__version__
+            version = mgear.anim_picker.__version__
 
         attrPlug = "{}.{}".format(self.name, self.__VERSION_ATTR__)
         cmds.setAttr(attrPlug, k=False, l=False)

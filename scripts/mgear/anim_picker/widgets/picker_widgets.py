@@ -6,11 +6,11 @@ import maya.cmds as cmds
 from mgear.core import pyqt
 from mgear.vendor.Qt import QtCore, QtWidgets, QtGui
 
-from anim_picker.widgets import basic
-from anim_picker.handlers import (__EDIT_MODE__,
-                                  __SELECTION__,
-                                  python_handlers,
-                                  maya_handlers)
+from mgear.anim_picker.widgets import basic
+from mgear.anim_picker.handlers import (__EDIT_MODE__,
+                                        __SELECTION__,
+                                        python_handlers,
+                                        maya_handlers)
 
 
 # =============================================================================
@@ -453,7 +453,7 @@ class ItemOptionsWindow(QtWidgets.QMainWindow):
 
         point_count = self.picker_item.edit_point_count
         self.count_sb = basic.CallBackSpinBox(callback=point_count,
-                                        value=self.picker_item.point_count)
+                                              value=self.picker_item.point_count)
         self.count_sb.setMinimum(2)
         spin_layout.addWidget(self.count_sb)
 
@@ -490,8 +490,8 @@ class ItemOptionsWindow(QtWidgets.QMainWindow):
 
         edit_pos_event = self.edit_position_event
         self.pos_x_sb = basic.CallBackDoubleSpinBox(callback=edit_pos_event,
-                                              value=position.x(),
-                                              min=-9999)
+                                                    value=position.x(),
+                                                    min=-9999)
         spin_layout.addWidget(self.pos_x_sb)
 
         layout.addLayout(spin_layout)
@@ -504,8 +504,8 @@ class ItemOptionsWindow(QtWidgets.QMainWindow):
         spin_layout.addWidget(label)
 
         self.pos_y_sb = basic.CallBackDoubleSpinBox(callback=edit_pos_event,
-                                              value=position.y(),
-                                              min=-9999)
+                                                    value=position.y(),
+                                                    min=-9999)
         spin_layout.addWidget(self.pos_y_sb)
 
         layout.addLayout(spin_layout)
@@ -550,8 +550,8 @@ class ItemOptionsWindow(QtWidgets.QMainWindow):
         alpha_event = self.change_color_alpha_event
         alpha_value = self.picker_item.get_color().alpha()
         self.alpha_sb = basic.CallBackSpinBox(callback=alpha_event,
-                                        value=alpha_value,
-                                        max=255)
+                                              value=alpha_value,
+                                              max=255)
         layout.addWidget(self.alpha_sb)
 
         # Add to main layout
@@ -675,8 +675,8 @@ class ItemOptionsWindow(QtWidgets.QMainWindow):
         # Add default select mode radio button
         custom_mode = not self.picker_item.get_custom_action_mode()
         default_rad = basic.CallbackRadioButtonWidget("default",
-                                                self.mode_radio_event,
-                                                checked=custom_mode)
+                                                      self.mode_radio_event,
+                                                      checked=custom_mode)
         default_rad.setText("Default action (select)")
         default_rad.setToolTip(
             "Run default selection action on related controls")
@@ -685,8 +685,8 @@ class ItemOptionsWindow(QtWidgets.QMainWindow):
         # Add custom action script radio button
         action_mode = self.picker_item.get_custom_action_mode()
         custom_rad = basic.CallbackRadioButtonWidget("custom",
-                                               self.mode_radio_event,
-                                               checked=action_mode)
+                                                     self.mode_radio_event,
+                                                     checked=action_mode)
         custom_rad.setText("Custom action (script)")
         custom_rad.setToolTip("Change mode to run a custom action script")
         layout.addWidget(custom_rad)

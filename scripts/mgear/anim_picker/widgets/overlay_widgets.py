@@ -8,9 +8,9 @@ import maya.cmds as cmds
 from mgear.vendor.Qt import QtCore, QtWidgets, QtOpenGL, QtGui
 
 # module
-from anim_picker import picker_node
-from anim_picker.widgets import basic
-from anim_picker.handlers import file_handlers
+from mgear.anim_picker import picker_node
+from mgear.anim_picker.widgets import basic
+from mgear.anim_picker.handlers import file_handlers
 
 
 class OverlayWidget(QtWidgets.QWidget):

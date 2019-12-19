@@ -9,7 +9,7 @@ from mgear.synoptic import utils
 from mgear.vendor.Qt import QtCore, QtWidgets, QtGui
 
 # module
-from anim_picker.handlers import __EDIT_MODE__
+from mgear.anim_picker.handlers import __EDIT_MODE__
 
 # seems to conflicts with maya viewports...
 __USE_OPENGL__ = True

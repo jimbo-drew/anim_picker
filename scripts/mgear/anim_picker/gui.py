@@ -15,10 +15,10 @@ from mgear.core import pyqt, callbackManager
 from mgear.vendor.Qt import QtCore, QtWidgets, QtOpenGL, QtGui
 
 # module
-import picker_node
-from widgets import basic
-from widgets import picker_widgets
-from widgets import overlay_widgets
+from . import picker_node
+from mgear.anim_picker.widgets import basic
+from mgear.anim_picker.widgets import picker_widgets
+from mgear.anim_picker.widgets import overlay_widgets
 
 from handlers import __EDIT_MODE__
 from handlers import __SELECTION__
