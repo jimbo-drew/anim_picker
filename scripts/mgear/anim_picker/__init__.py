@@ -10,7 +10,7 @@ __version__ = "1.1.0"
 # =============================================================================
 # Load user interface function
 # =============================================================================
-def load(edit=False, dockable=True):
+def load(edit=False, dockable=False, *args, **kwargs):
     """To launch the ui and not get the same instance
 
     Returns:

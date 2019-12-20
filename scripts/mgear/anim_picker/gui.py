@@ -175,7 +175,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
                  main_window=None):
         QtWidgets.QGraphicsView.__init__(self)
 
-        self.setScene(OrderedGraphicsScene())
+        self.setScene(OrderedGraphicsScene(parent=self))
 
         self.namespace = namespace
         self.main_window = main_window
@@ -523,7 +523,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         '''Clear view, by replacing scene with a new one
         '''
         old_scene = self.scene()
-        self.setScene(OrderedGraphicsScene())
+        self.setScene(OrderedGraphicsScene(parent=self))
         old_scene.deleteLater()
 
     def get_picker_items(self):
@@ -777,11 +777,15 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
                 view.set_data(tab_content)
 
 
+# class MainDockWindow(QtWidgets.QWidget):
 class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
     __OBJ_NAME__ = "ctrl_picker_window"
     __TITLE__ = "Anim Picker"
 
-    def __init__(self, parent=pyqt.maya_main_window(), edit=False):
+    def __init__(self,
+                 parent=None,
+                 edit=False,
+                 dockable=True):
         super(MainDockWindow, self).__init__(parent=parent)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
         self.ready = False
@@ -797,6 +801,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         self.script_jobs = []
 
         __EDIT_MODE__.set_init(edit)
+        self.is_dockable = dockable
 
         # Setup ui
         self.cb_manager = callbackManager.CallbackManager()
@@ -824,11 +829,26 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         self.main_vertical_layout.addWidget(self.spaces_widget)
         self.spaces_widget.set_tab_widget(self.tab_widget)
 
+        # if the window is not dockable we can control the opacity
+        # MayaQWidgetDockableMixin overrides setWindowsOpacity
+        if not self.is_dockable:
+            self.opacity_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+            self.opacity_slider.setRange(10, 100)
+            self.opacity_slider.setValue(100)
+            self.opacity_slider.valueChanged.connect(self.change_opacity)
+            self.main_vertical_layout.addWidget(self.opacity_slider)
+
         self.add_overlays()
 
         # Creating is done (workaround for signals being fired
         # off before everything is created)
         self.ready = True
+
+    def change_opacity(self):
+        """Change the  windows opacity
+        """
+        o = self.opacity_slider.value()
+        self.setWindowOpacity(o / 100.0)
 
     def reset_default_size(self):
         '''Reset window size to default
@@ -1317,6 +1337,16 @@ def load(edit=False, dockable=True):
             ANIM_PKR_UI.deleteLater()
         except Exception:
             pass
-    ANIM_PKR_UI = MainDockWindow(parent=None, edit=edit)
-    ANIM_PKR_UI.show(dockable=True)
+    ANIM_PKR_UI = MainDockWindow(parent=None,
+                                 edit=edit,
+                                 dockable=dockable)
+
+    # NOTE: if instedad with set dockable to false the window doesn't get
+    # parented to Maya UI
+    # TODO: Dockable breaks the interface when docks. For the moment this
+    # option is not available from the menu
+    if dockable:
+        ANIM_PKR_UI.show(dockable=True)
+    else:
+        ANIM_PKR_UI.show()
     return ANIM_PKR_UI
