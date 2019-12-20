@@ -968,6 +968,9 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
     def dockCloseEventTriggered(self):
         self.close()
 
+    def closeEvent(self, evnt):
+        self.close()
+
     def close(self):
         '''Overwriting close event to close child windows too
         '''
@@ -997,6 +1000,8 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         try:
             cmds.workspaceControl(work_name, e=True, close=True)
         except ValueError:
+            pass
+        except RuntimeError:
             pass
         self.deleteLater()
 
@@ -1330,13 +1335,13 @@ def load(edit=False, dockable=True):
         dockable (bool, optional): Description
 
     """
-    global ANIM_PKR_UI
-    if 'ANIM_PKR_UI' in globals():
-        try:
-            ANIM_PKR_UI.close()
-            ANIM_PKR_UI.deleteLater()
-        except Exception:
-            pass
+    # global ANIM_PKR_UI
+    # if 'ANIM_PKR_UI' in globals():
+    #     try:
+    #         ANIM_PKR_UI.close()
+    #         ANIM_PKR_UI.deleteLater()
+    #     except Exception:
+    #         pass
     ANIM_PKR_UI = MainDockWindow(parent=None,
                                  edit=edit,
                                  dockable=dockable)
