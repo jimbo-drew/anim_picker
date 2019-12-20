@@ -42,8 +42,8 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
     Had to add z_index support since there was a little z
     conflict when "moving" items to back/front in edit mode
     '''
-    __DEFAULT_SCENE_WIDTH__ = 400
-    __DEFAULT_SCENE_HEIGHT__ = 600
+    __DEFAULT_SCENE_WIDTH__ = 4000
+    __DEFAULT_SCENE_HEIGHT__ = 4000
 
     def __init__(self, parent=None):
         QtWidgets.QGraphicsScene.__init__(self, parent=parent)
@@ -167,8 +167,8 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
 class GraphicViewWidget(QtWidgets.QGraphicsView):
     '''Graphic view widget that display the "polygons" picker items
     '''
-    __DEFAULT_SCENE_WIDTH__ = 400
-    __DEFAULT_SCENE_HEIGHT__ = 600
+    __DEFAULT_SCENE_WIDTH__ = 4000
+    __DEFAULT_SCENE_HEIGHT__ = 4000
 
     def __init__(self,
                  namespace=None,
@@ -326,8 +326,9 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
     def wheelEvent(self, event):
         '''Wheel event overload to add zoom support
         '''
+        self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         # Run default event
-        QtWidgets.QGraphicsView.wheelEvent(self, event)
+        # QtWidgets.QGraphicsView.wheelEvent(self, event)
 
         # Define zoom factor
         factor = 1.1
@@ -335,13 +336,38 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             factor = 0.9
 
         # Apply zoom
-        self.zoom(factor,)
-
-    def zoom(self, factor, center=QtCore.QPointF(0, 0)):
-        '''Zoom by factor and keep "center" in view
-        '''
+        # self.zoom(factor, event.pos())
         self.scale(factor, factor)
-        # self.centerOn(center)
+
+        # self.setTransformationAnchor(QtWidgets.QGraphicsView.NoAnchor)
+        # self.setResizeAnchor(QtWidgets.QGraphicsView.NoAnchor)
+        # oldPos = self.mapToScene(event.pos())
+        # newPos = self.mapToScene(event.pos())
+
+        # # Move scene to old position
+        # delta = newPos - oldPos
+        # # self.translate(delta.x(), delta.y())
+        # print delta
+        # self.translate(300, 300)
+        # # self.centerOn(delta)
+
+        # current_center = self.get_center_pos()
+        # oldPos = self.mapToScene(event.pos())
+        # old_delta = current_center - oldPos
+        # new_delta = old_delta * factor
+        # self.scale(factor, factor)
+        # newPos = self.mapToScene(event.pos())
+        # # current_center = self.get_center_pos()
+        # new_center = oldPos + new_delta
+        # self.centerOn(new_center)
+
+
+
+    # def zoom(self, factor, center=QtCore.QPointF(0, 0)):
+    #     '''Zoom by factor and keep "center" in view
+    #     '''
+    #     self.scale(factor, factor)
+    #     # self.centerOn(center)
 
     def contextMenuEvent(self, event, mapped_pos=None):
         '''Right click menu options
