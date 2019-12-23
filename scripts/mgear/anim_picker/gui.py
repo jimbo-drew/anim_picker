@@ -60,7 +60,7 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
         self.set_size(self.__DEFAULT_SCENE_WIDTH__,
                       self.__DEFAULT_SCENE_HEIGHT__)
 
-    def get_bounding_rect(self, margin=0):
+    def get_bounding_rect(self, margin=0, selection=False):
         '''
         Return scene content bounding box with specified margin
         Warning: In edit mode, will return default scene rectangle
@@ -70,7 +70,32 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
             return self.sceneRect()
 
         # Get item boundingBox
-        scene_rect = self.itemsBoundingRect()
+        if selection:
+            scene_rect = self.selectionArea().boundingRect()
+            sel_items = self.get_selected_items()
+            scene_rect = QtCore.QRectF()
+
+            #init coordinates with the first element
+            rec = sel_items[0].boundingRect().getCoords()
+            x1 = (rec[0] + sel_items[0].x())
+            y1 = (rec[1] + sel_items[0].y())
+            x2 = (rec[2] + sel_items[0].x())
+            y2 = (rec[3] + sel_items[0].y())
+
+            for item in sel_items[1:]:
+                rec = item.boundingRect().getCoords()
+                if (rec[0] + item.x()) < x1:
+                    x1 = (rec[0] + item.x())
+                if (rec[1] + item.y()) < y1:
+                    y1 = (rec[1] + item.y())
+                if (rec[2] + item.x()) > x2:
+                    x2 = (rec[2] + item.x())
+                if (rec[3] + item.y()) > y2:
+                    y2 = (rec[3] + item.y())
+            scene_rect.setCoords(x1, y1, x2, y2)
+
+        else:
+            scene_rect = self.itemsBoundingRect()
 
         # Stop here if no margin
         if not margin:
@@ -392,6 +417,11 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         reset_view_action = QtWidgets.QAction("Reset view", None)
         reset_view_action.triggered.connect(self.fit_scene_content)
         menu.addAction(reset_view_action)
+        frame_selection_view_action = QtWidgets.QAction(
+            "Frame Selection", None)
+        frame_selection_view_action.triggered.connect(
+            self.fit_selection_content)
+        menu.addAction(frame_selection_view_action)
 
         # Open context menu under mouse
         menu.exec_(event.globalPos())
@@ -410,6 +440,14 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         '''
         scene_rect = self.scene().get_bounding_rect(margin=8)
         self.fitInView(scene_rect, QtCore.Qt.KeepAspectRatio)
+
+    def fit_selection_content(self):
+        '''Will fit the selected item to view, by scaling it
+        '''
+        scene_rect = self.scene().get_bounding_rect(margin=8, selection=True)
+        self.fitInView(scene_rect, QtCore.Qt.KeepAspectRatio)
+        # self.fitInView(self.scene().selectionArea().boundingRect(),
+        #                QtCore.Qt.KeepAspectRatio)
 
     def add_picker_item(self, event=None):
         '''Add new PickerItem to current view
