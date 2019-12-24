@@ -66,13 +66,15 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
         Warning: In edit mode, will return default scene rectangle
         '''
         # Return default size in edit mode
-        if __EDIT_MODE__.get():
-            return self.sceneRect()
+        # if __EDIT_MODE__.get():
+        #     return self.sceneRect()
 
         # Get item boundingBox
         if selection:
-            scene_rect = self.selectionArea().boundingRect()
+            # scene_rect = self.selectionArea().boundingRect()
             sel_items = self.get_selected_items()
+            if not sel_items:
+                return
             scene_rect = QtCore.QRectF()
 
             #init coordinates with the first element
@@ -445,7 +447,8 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         '''Will fit the selected item to view, by scaling it
         '''
         scene_rect = self.scene().get_bounding_rect(margin=8, selection=True)
-        self.fitInView(scene_rect, QtCore.Qt.KeepAspectRatio)
+        if scene_rect:
+            self.fitInView(scene_rect, QtCore.Qt.KeepAspectRatio)
         # self.fitInView(self.scene().selectionArea().boundingRect(),
         #                QtCore.Qt.KeepAspectRatio)
 
@@ -863,9 +866,9 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         self.add_tab_widget()
 
         # TODO remove temporary addition of the space otpions
-        self.spaces_widget = basic.SpaceSwitcher()
-        self.main_vertical_layout.addWidget(self.spaces_widget)
-        self.spaces_widget.set_tab_widget(self.tab_widget)
+        # self.spaces_widget = basic.SpaceSwitcher()
+        # self.main_vertical_layout.addWidget(self.spaces_widget)
+        # self.spaces_widget.set_tab_widget(self.tab_widget)
 
         # if the window is not dockable we can control the opacity
         # MayaQWidgetDockableMixin overrides setWindowsOpacity
