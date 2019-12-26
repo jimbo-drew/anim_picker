@@ -5,6 +5,7 @@
 from mgear.synoptic import utils
 
 from mgear.vendor.Qt import QtCore, QtWidgets, QtGui
+from mgear.core import pyqt
 
 
 def get_instance(parent, gui_class):
@@ -14,7 +15,7 @@ def get_instance(parent, gui_class):
     return None
 
 
-class DropListMenu(QtWidgets.QMenu):
+class SpaceChangeList(QtWidgets.QMenu):
 
     def __init__(self,
                  namespace,
@@ -24,7 +25,7 @@ class DropListMenu(QtWidgets.QMenu):
                  self_widget,
                  *args,
                  **kwargs):
-        super(DropListMenu, self).__init__(*args, **kwargs)
+        super(SpaceChangeList, self).__init__(*args, **kwargs)
         self.namespace = namespace
         self.ui_host = ui_host
         self.combo_attr = combo_attr
@@ -72,27 +73,12 @@ class DropListMenu(QtWidgets.QMenu):
         self.deleteLater()
 
 
-def get_main_window(widget=None):
-    widget = widget or QtWidgets.QApplication.activeWindow()
-    if widget is None:
-        return
-    parent = widget.parent()
-    if parent is None:
-        return widget
-    return get_main_window(parent)
-
-
-def position_window(window):
-    pos = QtGui.QCursor.pos()
-    window.move(pos.x(), pos.y())
-
-
-def show_drop_list(namespace,
-                   ui_host,
-                   combo_attr,
-                   ctl,
-                   self_widget,
-                   env_init):
+def show_space_chage_list(namespace,
+                          ui_host,
+                          combo_attr,
+                          ctl,
+                          self_widget,
+                          env_init):
 
     if env_init:
         list1 = utils.getComboKeys(
@@ -102,19 +88,17 @@ def show_drop_list(namespace,
         self_widget.text.set_text(list1[current_idx])
 
     else:
-        maya_window = get_main_window()
-        # look for existing instances of QuickLauncher
-        ql = get_instance(maya_window, DropListMenu)
+        maya_window = pyqt.get_main_window()
+        ql = get_instance(maya_window, SpaceChangeList)
         if ql:
             ql.deleteLater()
         # create a new instance
-        ql = DropListMenu(namespace,
-                          ui_host,
-                          combo_attr,
-                          ctl,
-                          self_widget,
-                          maya_window)
+        ql = SpaceChangeList(namespace,
+                             ui_host,
+                             combo_attr,
+                             ctl,
+                             self_widget,
+                             maya_window)
 
-        position_window(ql)
+        pyqt.position_window(ql)
         ql.exec_()
-
