@@ -2099,6 +2099,12 @@ class PickerItem(DefaultPolygon):
         # screen_pos = self.parent().mapToGlobal(view_pos)
         menu.exec_(offseted_pos)
 
+    def get_init_env(self):
+        env = self.get_exec_env()
+        env["__INIT__"] = True
+
+        return env
+
     def get_exec_env(self):
         '''
         Will return proper environnement dictionnary for eval execs
@@ -2113,6 +2119,8 @@ class PickerItem(DefaultPolygon):
         ctrls = self.get_controls()
         env["__FLATCONTROLS__"] = maya_handlers.get_flattened_nodes(ctrls)
         env["__NAMESPACE__"] = self.get_namespace()
+        env["__SELF__"] = self
+        env["__INIT__"] = False
 
         return env
 
@@ -2552,10 +2560,19 @@ class PickerItem(DefaultPolygon):
         if "handles" in data:
             self.set_handles(data["handles"])
 
+        # Set text
+        if "text" in data:
+            self.set_text(data["text"])
+            self.set_text_size(data["text_size"])
+            color = QtGui.QColor(*data["text_color"])
+            self.set_text_color(color)
+
         # Set action mode
         if data.get("action_mode", False):
             self.set_custom_action_mode(True)
             self.set_custom_action_script(data.get("action_script", None))
+            python_handlers.safe_code_exec(self.get_custom_action_script(),
+                                           env=self.get_init_env())
 
         # Set controls
         if "controls" in data:
@@ -2564,13 +2581,6 @@ class PickerItem(DefaultPolygon):
         # Set custom menus
         if "menus" in data:
             self.set_custom_menus(data["menus"])
-
-        # Set text
-        if "text" in data:
-            self.set_text(data["text"])
-            self.set_text_size(data["text_size"])
-            color = QtGui.QColor(*data["text_color"])
-            self.set_text_color(color)
 
     def get_data(self):
         '''Get picker item data in dictionary form
