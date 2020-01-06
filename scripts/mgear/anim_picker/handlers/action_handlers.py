@@ -4,18 +4,21 @@
 # we should not be depend of synoptic package
 from mgear.synoptic import utils
 
-from mgear.vendor.Qt import QtCore, QtWidgets, QtGui
+from mgear.vendor.Qt import QtWidgets
 from mgear.core import pyqt
 
 
-def get_instance(parent, gui_class):
-    for children in parent.children():
-        if isinstance(children, gui_class):
-            return children
-    return None
-
-
 class SpaceChangeList(QtWidgets.QMenu):
+
+    """ Space switcher list with automatic matching
+
+    Attributes:
+        combo_attr (str): Description
+        ctl (str): Description
+        namespace (str): Description
+        self_widget (str): Description
+        ui_host (str): Description
+    """
 
     def __init__(self,
                  namespace,
@@ -35,15 +38,17 @@ class SpaceChangeList(QtWidgets.QMenu):
         self.init_gui()
 
     def init_gui(self):
+        """initialize the gui
+        """
         self.listWidget = QtWidgets.QListWidget(self)
         action = QtWidgets.QWidgetAction(self)
         action.setDefaultWidget(self.listWidget)
         self.addAction(action)
         self.listWidget.setFocus()
 
-        self.list1 = utils.getComboKeys(
+        self.key_list = utils.getComboKeys(
             self.namespace, self.ui_host, self.combo_attr)
-        self.listWidget.addItems(self.list1)
+        self.listWidget.addItems(self.key_list)
         current_idx = utils.getComboIndex(
             self.namespace, self.ui_host, self.combo_attr)
         self.listWidget.setCurrentRow(current_idx)
@@ -51,7 +56,8 @@ class SpaceChangeList(QtWidgets.QMenu):
         self.listWidget.currentRowChanged.connect(self.accept)
 
     def accept(self):
-
+        """sets the new space
+        """
         if self.listWidget.currentRow() == self.listWidget.count() - 1:
             self.listWidget.setCurrentRow(utils.getComboIndex(
                 self.namespace, self.ui_host, self.combo_attr))
@@ -79,17 +85,26 @@ def show_space_chage_list(namespace,
                           ctl,
                           self_widget,
                           env_init):
+    """Shows wht space switch list and also initialize the picker widget name
 
+    Args:
+        namespace (TYPE): Description
+        ui_host (TYPE): Description
+        combo_attr (TYPE): Description
+        ctl (TYPE): Description
+        self_widget (TYPE): Description
+        env_init (TYPE): Description
+    """
     if env_init:
-        list1 = utils.getComboKeys(
+        key_list = utils.getComboKeys(
             namespace, ui_host, combo_attr)
         current_idx = utils.getComboIndex(
             namespace, ui_host, combo_attr)
-        self_widget.text.set_text(list1[current_idx])
+        self_widget.text.set_text(key_list[current_idx])
 
     else:
         maya_window = pyqt.get_main_window()
-        ql = get_instance(maya_window, SpaceChangeList)
+        ql = pyqt.get_instance(maya_window, SpaceChangeList)
         if ql:
             ql.deleteLater()
         # create a new instance
