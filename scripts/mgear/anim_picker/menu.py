@@ -1,5 +1,5 @@
 import mgear.menu
-import anim_picker
+from mgear import anim_picker
 from functools import partial
 
 
