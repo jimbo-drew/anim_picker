@@ -4,14 +4,18 @@
 
 import os
 import json
+import functools
 
 from mgear.core import pyqt
 from mgear.vendor.Qt import QtWidgets
 
 from mgear.anim_picker.widgets import basic
 
+ANIM_PICKER_VAR = "ANIM_PICKER_PATH"
 
 # i/o -------------------------------------------------------------------------
+
+
 def _importData(file_path):
     try:
         with open(file_path, 'r') as f:
@@ -29,6 +33,36 @@ def _exportData(data, file_path):
         print e
 
 
+def _convert_path_token(file_path):
+    """convert ANIM_PICKER_PATH env var to a full path
+
+    Args:
+        file_path (str): file path
+
+    Returns:
+        str: file path with updated token to path
+    """
+    path_token = "[{}]".format(ANIM_PICKER_VAR)
+    if path_token in file_path:
+        if os.environ.get(ANIM_PICKER_VAR, ""):
+            file_path = file_path.replace(path_token,
+                                          os.environ.get(ANIM_PICKER_VAR, ""))
+    return file_path
+
+
+def convert_path_token(f):
+    @functools.wraps(f)
+    def wrap(*args, **kwargs):
+        if args:
+            list(args)[0] = _convert_path_token(args[0])
+        else:
+            kwargs["file_path"] = _convert_path_token(kwargs["file_path"])
+        x = f(*args, **kwargs)
+        return x
+    return wrap
+
+
+@convert_path_token
 def read_data_file(file_path):
     '''Read data from file
     '''
@@ -38,6 +72,7 @@ def read_data_file(file_path):
     return pkr_data
 
 
+@convert_path_token
 def write_data_file(file_path, data={}, force=False):
     '''Write data to file
 
@@ -47,6 +82,7 @@ def write_data_file(file_path, data={}, force=False):
     f (bool): force write mode, if false, will ask for confirmation when
     overwriting existing files
     '''
+
     # Ask for confirmation on existing file
     if os.path.exists(file_path) and not force:
         decision = basic.promptAcceptance(pyqt.maya_main_window(),
