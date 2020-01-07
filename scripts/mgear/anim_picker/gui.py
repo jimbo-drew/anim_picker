@@ -934,9 +934,9 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         btns_layout.addItem(spacer)
 
         # sync checkbox
-
-        self.checkbox = QtWidgets.QCheckBox("Sync Namespace")
-        btns_layout.addWidget(self.checkbox)
+        if not __EDIT_MODE__.get():
+            self.checkbox = QtWidgets.QCheckBox("Sync Namespace")
+            btns_layout.addWidget(self.checkbox)
 
 
         # About btn
@@ -1364,17 +1364,18 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # Update selection data
         __SELECTION__.update()
 
-
+        # sync with namespce
+        if not __EDIT_MODE__.get():
+            sel = pm.selected()
+            sync = self.checkbox.isChecked()
+            if sel and sync:
+                ns = sel[0].namespace()
+                if ns:
+                    for i, n in enumerate(self.char_selector_cb.nodes):
+                        if ns in str(n):
+                            self.char_selector_cb.setCurrentIndex(i)
+                            break
         # Update controls for active tab
-        sel = pm.selected()
-        sync = self.checkbox.isChecked()
-        if sel and sync:
-            ns = sel[0].namespace()
-            if ns:
-                for i, n in enumerate(self.char_selector_cb.nodes):
-                    if ns in str(n):
-                        self.char_selector_cb.setCurrentIndex(i)
-                        break
         for item in self.get_picker_items():
              item.run_selection_check()
 
