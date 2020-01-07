@@ -934,8 +934,8 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         btns_layout.addItem(spacer)
 
         # sync checkbox
+        self.checkbox = QtWidgets.QCheckBox("Sync Namespace")
         if not __EDIT_MODE__.get():
-            self.checkbox = QtWidgets.QCheckBox("Sync Namespace")
             btns_layout.addWidget(self.checkbox)
 
 
