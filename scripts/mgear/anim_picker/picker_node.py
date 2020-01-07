@@ -7,6 +7,7 @@ import os
 
 # dcc
 from maya import cmds
+import pymel.core as pm
 
 # anim picker
 import mgear.anim_picker
@@ -112,22 +113,39 @@ class DataNode():
         assert self.is_referenced, "Data node '{}' is referenced, and can not \
         be modified.".format(self.name)
 
-    def create(self):
-        '''Will create data node
-        '''
-        # Abort if node already exists
-        if cmds.objExists(self.name):
-            sys.stderr.write("node '{}' already exists.".format(self.name))
-            return self.name
+    def create(self, node=None):
+        """Will create the node data
 
-        # Create data node (render sphere for outliner "icon")
-        shp = cmds.createNode("renderSphere")
-        cmds.setAttr("{}.radius".format(shp), 0)
-        cmds.setAttr("{}.v".format(shp, 0))
+        if a node is provided will create the picker data in the node. If not
+        will create a new node
 
-        # Rename data node
-        node = cmds.listRelatives(shp, p=True)[0]
-        node = cmds.rename(node, self.name)
+        Args:
+            node (PyNode, optional): node to add the picker data
+
+        Returns:
+            TYPE: Description
+        """
+        if node:
+            if node.hasAttr("picker_datas_node"):
+                pm.displayWarning(
+                    "{} have anim picker data".formant(node.name()))
+            else:
+                node = node.name()
+
+        else:
+            # Abort if node already exists
+            if cmds.objExists(self.name):
+                sys.stderr.write("node '{}' already exists.".format(self.name))
+                return self.name
+
+            # Create data node (render sphere for outliner "icon")
+            shp = cmds.createNode("renderSphere")
+            cmds.setAttr("{}.radius".format(shp), 0)
+            cmds.setAttr("{}.v".format(shp, 0))
+
+            # Rename data node
+            node = cmds.listRelatives(shp, p=True)[0]
+            node = cmds.rename(node, self.name)
 
         # Tag data node
         cmds.addAttr(node, ln=self.__TAG__, at="bool", dv=True)
