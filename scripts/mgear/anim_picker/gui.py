@@ -952,11 +952,11 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         btns_layout.addWidget(load_btn)
 
         # Load from node
-        if not __EDIT_MODE__.get():
-            self.char_from_node_btn = basic.CallbackButton(
-                callback=self.load_from_sel_node)
-            self.char_from_node_btn.setText("Load from selection")
-            btns_layout.addWidget(self.char_from_node_btn)
+        # if not __EDIT_MODE__.get():
+        #     self.char_from_node_btn = basic.CallbackButton(
+        #         callback=self.load_from_sel_node)
+        #     self.char_from_node_btn.setText("Load from selection")
+        #     btns_layout.addWidget(self.char_from_node_btn)
 
         # Refresh button
         self.char_refresh_btn = basic.CallbackButton(callback=self.refresh)
