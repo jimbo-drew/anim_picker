@@ -8,6 +8,7 @@ import os
 
 # dcc
 from maya import cmds
+import pymel.core as pm
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 # mgear
@@ -932,6 +933,12 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
                                        QtWidgets.QSizePolicy.Minimum)
         btns_layout.addItem(spacer)
 
+        # sync checkbox
+
+        self.checkbox = QtWidgets.QCheckBox("Sync Namespace")
+        btns_layout.addWidget(self.checkbox)
+
+
         # About btn
         about_btn = basic.CallbackButton(callback=self.show_about_infos)
         about_btn.setText("?")
@@ -1357,9 +1364,19 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # Update selection data
         __SELECTION__.update()
 
+
         # Update controls for active tab
+        sel = pm.selected()
+        sync = self.checkbox.isChecked()
+        if sel and sync:
+            ns = sel[0].namespace()
+            if ns:
+                for i, n in enumerate(self.char_selector_cb.nodes):
+                    if ns in str(n):
+                        self.char_selector_cb.setCurrentIndex(i)
+                        break
         for item in self.get_picker_items():
-            item.run_selection_check()
+             item.run_selection_check()
 
 
 # # =============================================================================
