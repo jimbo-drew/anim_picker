@@ -7,9 +7,9 @@ def install():
     """Install Skinning submenu
     """
     commands = (
-        ("Anim Picker", partial(anim_picker.load, edit=False)),
+        ("Anim Picker", partial(anim_picker.load, False, False)),
         ("-----", None),
-        ("Edit Anim Picker", partial(anim_picker.load, edit=True))
+        ("Edit Anim Picker", partial(anim_picker.load, True, False))
     )
 
     mgear.menu.install("Anim Picker", commands)

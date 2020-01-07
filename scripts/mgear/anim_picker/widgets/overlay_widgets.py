@@ -256,15 +256,17 @@ class AboutOverlayWidget(OverlayWidget):
 
     def get_text(self):
         text = '''
+
         Anim_picker,
 
         Copyright (c) 2012-2013 Guillaume Barlier
-        This programe is covered by the LGPLv3 or later.
+        This programe is under MIT license.
 
-        Check for updates on my website:
+        Original repository
         https://github.com/gbarlier
 
-        Current development & maintainence by https://github.com/mgear-dev
+        Current development & maintainence by mGear Dev Team
+        https://github.com/mgear-dev/anim_picker
 
         '''
 
