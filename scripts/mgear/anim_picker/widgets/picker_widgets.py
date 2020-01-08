@@ -2033,6 +2033,24 @@ class PickerItem(DefaultPolygon):
 
         menu.addSeparator()
 
+        # Paste position actions
+        paste_x_action = QtWidgets.QAction("Paste Pos X", None)
+        if DataCopyDialog.__DATA__:
+            paste_x_action.triggered.connect(self.past_x_event)
+        else:
+            paste_x_action.setEnabled(False)
+        menu.addAction(paste_x_action)
+
+        paste_y_action = QtWidgets.QAction("Paste Pos Y", None)
+        if DataCopyDialog.__DATA__:
+            paste_y_action.triggered.connect(self.past_y_event)
+        else:
+            paste_y_action.setEnabled(False)
+        menu.addAction(paste_y_action)
+
+
+        menu.addSeparator()
+
         # Duplicate options
         duplicate_action = QtWidgets.QAction("Duplicate", None)
         duplicate_action.triggered.connect(self.duplicate_selected)
@@ -2353,6 +2371,19 @@ class PickerItem(DefaultPolygon):
                                                  replace=replace)
         return new_item
 
+    def paste_pos(self, x=True, y=False):
+        """Paste the position x and y of a picker
+
+        Args:
+            x (bool, optional): if true paste X position
+            y (bool, optional): if true paste Y position
+        """
+        selected_pickers = self.scene().get_selected_items()
+        if self not in selected_pickers:
+            selected_pickers.append(self)
+        for picker in selected_pickers:
+            DataCopyDialog.set_pos(picker, x, y)
+
     def copy_event(self):
         '''Store pickerItem data for copy/paste support
         '''
@@ -2361,7 +2392,21 @@ class PickerItem(DefaultPolygon):
     def past_event(self):
         '''Apply previously stored pickerItem data
         '''
-        DataCopyDialog.set(self)
+        selected_pickers = self.scene().get_selected_items()
+        if self not in selected_pickers:
+            selected_pickers.append(self)
+        for picker in selected_pickers:
+            DataCopyDialog.set(picker)
+
+    def past_x_event(self):
+        """Paste X position
+        """
+        self.paste_pos(x=True, y=False)
+
+    def past_y_event(self):
+        """Paste Y position
+        """
+        self.paste_pos(x=False, y=True)
 
     def past_option_event(self):
         '''Will open Paste option dialog window
@@ -2734,10 +2779,48 @@ class DataCopyDialog(QtWidgets.QDialog):
 
         if not win.apply:
             return
-        win.set(item)
+        # win.set(item)
+
+    @staticmethod
+    def set_pos(item=None, x=True, y=True):
+        """Set the position date for a specific picker item
+
+        Args:
+            item (object, optional): picker object item
+            x (bool, optional): if true will set X position
+            y (bool, optional): if true will set Y position
+        """
+        # Sanity check
+        msg = "Item is not an PickerItem instance"
+        assert isinstance(item, PickerItem), msg
+        assert DataCopyDialog.__DATA__, "No stored data to paste"
+
+        keys = []
+        keys.append("position")
+
+        # Build valid data
+        data = {}
+        for key in keys:
+            if key not in DataCopyDialog.__DATA__:
+                continue
+            data[key] = DataCopyDialog.__DATA__[key]
+
+        # Get picker item data
+        item_data = item.get_data()
+
+        if x:
+            data['position'][1] = item_data['position'][1]
+        if y:
+            data['position'][0] = item_data['position'][0]
+        item.set_data(data)
 
     @staticmethod
     def set(item=None):
+        """Set the data to specific picker item
+
+        Args:
+            item (object, optional): Picker object
+        """
         # Sanity check
         msg = "Item is not an PickerItem instance"
         assert isinstance(item, PickerItem), msg
