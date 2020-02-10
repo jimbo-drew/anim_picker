@@ -1,8 +1,6 @@
 
-
-# TODO: Synoptic utils should be refactor in mgear_core or in anim_picker.
-# we should not be depend of synoptic package
-from mgear.synoptic import utils
+from mgear.core import anim_utils
+from mgear.core.anim_utils import stripNamespace
 
 from mgear.vendor.Qt import QtWidgets
 from mgear.core import pyqt
@@ -13,11 +11,11 @@ class SpaceChangeList(QtWidgets.QMenu):
     """ Space switcher list with automatic matching
 
     Attributes:
-        combo_attr (str): Description
-        ctl (str): Description
-        namespace (str): Description
-        self_widget (str): Description
-        ui_host (str): Description
+        combo_attr (str): attribute with the spaces
+        ctl (str): control with the spaces
+        namespace (str): namespace
+        self_widget (str): __SELF__ anim picker widget reference
+        ui_host (str): control host with the combo attribute
     """
 
     def __init__(self,
@@ -30,6 +28,8 @@ class SpaceChangeList(QtWidgets.QMenu):
                  **kwargs):
         super(SpaceChangeList, self).__init__(*args, **kwargs)
         self.namespace = namespace
+        if namespace:
+            ui_host = namespace + ":" + ui_host
         self.ui_host = ui_host
         self.combo_attr = combo_attr
         self.ctl = ctl
@@ -46,10 +46,10 @@ class SpaceChangeList(QtWidgets.QMenu):
         self.addAction(action)
         self.listWidget.setFocus()
 
-        self.key_list = utils.getComboKeys(
+        self.key_list = anim_utils.getComboKeys(
             self.namespace, self.ui_host, self.combo_attr)
         self.listWidget.addItems(self.key_list)
-        current_idx = utils.getComboIndex(
+        current_idx = anim_utils.getComboIndex(
             self.namespace, self.ui_host, self.combo_attr)
         self.listWidget.setCurrentRow(current_idx)
 
@@ -59,20 +59,23 @@ class SpaceChangeList(QtWidgets.QMenu):
         """sets the new space
         """
         if self.listWidget.currentRow() == self.listWidget.count() - 1:
-            self.listWidget.setCurrentRow(utils.getComboIndex(
-                self.namespace, self.ui_host, self.combo_attr))
-            utils.ParentSpaceTransfer.showUI(self.listWidget,
-                                             self.namespace,
-                                             self.ui_host,
-                                             self.combo_attr,
-                                             self.ctl)
+            self.listWidget.setCurrentRow(
+                anim_utils.getComboIndex_with_namespace(
+                    self.namespace, self.ui_host, self.combo_attr))
+            # model = self.namespace + ":" + self.ui_host
+            # print self.ctl
+            # print model
+            anim_utils.ParentSpaceTransfer.showUI(self.listWidget,
+                                                  self.ui_host,
+                                                  stripNamespace(self.ui_host),
+                                                  self.combo_attr,
+                                                  self.ctl)
         else:
-
-            utils.changeSpace(self.namespace,
-                              self.ui_host,
-                              self.combo_attr,
-                              self.listWidget.currentRow(),
-                              self.ctl)
+            anim_utils.changeSpace_with_namespace(self.namespace,
+                                                  self.ui_host,
+                                                  self.combo_attr,
+                                                  self.listWidget.currentRow(),
+                                                  self.ctl)
             space = self.listWidget.item(self.listWidget.currentRow()).text()
             self.self_widget.text.set_text(space)
         self.close()
@@ -88,17 +91,17 @@ def show_space_chage_list(namespace,
     """Shows wht space switch list and also initialize the picker widget name
 
     Args:
-        namespace (TYPE): Description
-        ui_host (TYPE): Description
-        combo_attr (TYPE): Description
-        ctl (TYPE): Description
-        self_widget (TYPE): Description
-        env_init (TYPE): Description
+        namespace (str): namespace
+        ui_host (str): the control UI host with combobox
+        combo_attr (str): combo attribute with the available spaces
+        ctl (str): control with to switch the space
+        self_widget (obj): __SELF__ the anim picker widget reference
+        env_init (bool): __INIT__  flag
     """
     if env_init:
-        key_list = utils.getComboKeys(
+        key_list = anim_utils.getComboKeys_with_namespace(
             namespace, ui_host, combo_attr)
-        current_idx = utils.getComboIndex(
+        current_idx = anim_utils.getComboIndex_with_namespace(
             namespace, ui_host, combo_attr)
         self_widget.text.set_text(key_list[current_idx])
 
@@ -108,6 +111,7 @@ def show_space_chage_list(namespace,
         if ql:
             ql.deleteLater()
         # create a new instance
+
         ql = SpaceChangeList(namespace,
                              ui_host,
                              combo_attr,
@@ -117,3 +121,47 @@ def show_space_chage_list(namespace,
 
         pyqt.position_window(ql)
         ql.exec_()
+
+
+def spine_ik_fk_transfer(namespace, fkControls, ikControls):
+    """spine IK FK transfer
+
+    Args:
+        namespace (str): namespace string
+        fkControls (list): list with the names of the fk controls
+        ikControls (list): list with the names of the ik controls
+    """
+    if namespace:
+        fkControls = [namespace + ":" + ctl for ctl in fkControls]
+        ikControls = [namespace + ":" + ctl for ctl in ikControls]
+
+    anim_utils.SpineIkFkTransfer.showUI("root",
+                                        namespace,
+                                        fkControls,
+                                        ikControls)
+
+
+def ik_fk_transfer(namespace, ikfk_attr, uihost, fks, ik, upv, ik_rot=None):
+    """IK FK transfer forl 2 joint limbs (arms and legs)
+
+    Args:
+        namespace (str): namespace
+        ikfk_attr (str): bland IK FK attribute
+        uihost (str): contorls with the ik.fk blend attribute
+        fks (list): list with the fk controls
+        ik (str): ik control
+        upv (str): up vector control
+        ik_rot (None or str, optional): ik rotation control if exist
+    """
+    if namespace:
+        model = namespace + ":" + uihost
+    else:
+        model = uihost
+
+    anim_utils.IkFkTransfer.showUI(model,
+                                   ikfk_attr,
+                                   uihost,
+                                   fks,
+                                   ik,
+                                   upv,
+                                   ik_rot)
