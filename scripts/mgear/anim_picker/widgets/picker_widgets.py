@@ -1686,7 +1686,9 @@ class GraphicText(QtWidgets.QGraphicsSimpleTextItem):
         (Since by default the text start on the bottom left corner)
         '''
         center_pos = self.boundingRect().center()
-        self.setPos(-center_pos * self.scale_transform)
+        # self.setPos(-center_pos * self.scale_transform)
+        scale_xy = QtCore.QPointF(center_pos.x(), center_pos.y() * -1)
+        self.setPos(-scale_xy)
 
 
 class PickerItem(DefaultPolygon):
@@ -1699,7 +1701,7 @@ class PickerItem(DefaultPolygon):
                  namespace=None,
                  main_window=None):
         DefaultPolygon.__init__(self, parent=parent)
-        self.point_count = point_count
+        self.point_count=point_count
 
         self.setPos(25, 30)
 
@@ -1709,31 +1711,31 @@ class PickerItem(DefaultPolygon):
             self.setFlag(self.ItemSendsScenePositionChanges)
 
         # Default vars
-        self.namespace = namespace
-        self.main_window = main_window
-        self._edit_status = False
-        self.edit_window = None
+        self.namespace=namespace
+        self.main_window=main_window
+        self._edit_status=False
+        self.edit_window=None
 
         # Add polygon
-        self.polygon = Polygon(parent=self)
+        self.polygon=Polygon(parent=self)
 
         # Add text
-        self.text = GraphicText(parent=self)
+        self.text=GraphicText(parent=self)
 
         # Add handles
-        self.handles = []
+        self.handles=[]
         self.set_handles(self.get_default_handles())
 
         # Controls vars
-        self.controls = []
-        self.custom_menus = []
+        self.controls=[]
+        self.custom_menus=[]
 
         # Custom action
-        self.custom_action = False
-        self.custom_action_script = None
+        self.custom_action=False
+        self.custom_action_script=None
 
     def shape(self):
-        path = QtGui.QPainterPath()
+        path=QtGui.QPainterPath()
 
         if self.polygon:
             path.addPath(self.polygon.shape())
@@ -1777,23 +1779,23 @@ class PickerItem(DefaultPolygon):
         Generate default point handles coordinate for polygon
         (on circle)
         '''
-        unit_scale = 20
-        handles = []
+        unit_scale=20
+        handles=[]
 
         # Define angle step
-        angle_step = pi * 2 / self.point_count
+        angle_step=pi * 2 / self.point_count
 
         # Generate point coordinates
         for i in range(0, self.point_count):
-            x = sin(i * angle_step + pi / self.point_count) * unit_scale
-            y = cos(i * angle_step + pi / self.point_count) * unit_scale
-            handle = PointHandle(x=x, y=y, parent=self, index=i + 1)
+            x=sin(i * angle_step + pi / self.point_count) * unit_scale
+            y=cos(i * angle_step + pi / self.point_count) * unit_scale
+            handle=PointHandle(x=x, y=y, parent=self, index=i + 1)
             handles.append(handle)
 
         # Circle case
         if len(handles) == 2:
             handles.reverse()
-            handles[0] = handles[0] + (handles[1] - handles[0]) / 2
+            handles[0]=handles[0] + (handles[1] - handles[0]) / 2
 
         return handles
 
@@ -1803,10 +1805,10 @@ class PickerItem(DefaultPolygon):
         (that will reset the shape)
         '''
         # Update point count
-        self.point_count = value
+        self.point_count=value
 
         # Reset points
-        points = self.get_default_handles()
+        points=self.get_default_handles()
         self.set_handles(points)
 
     def get_handles(self):
@@ -1823,17 +1825,17 @@ class PickerItem(DefaultPolygon):
             handle.deleteLater()
 
         # Parse input type
-        new_handles = []
+        new_handles=[]
         # start index at 1 since table Widget raw are indexed at 1
-        index = 1
+        index=1
         for handle in handles:
             if isinstance(handle, (list, tuple)):
-                handle = PointHandle(x=handle[0],
+                handle=PointHandle(x=handle[0],
                                      y=handle[1],
                                      parent=self,
                                      index=index)
             elif hasattr(handle, 'x') and hasattr(handle, 'y'):
-                handle = PointHandle(x=handle.x(),
+                handle=PointHandle(x=handle.x(),
                                      y=handle.y(),
                                      parent=self,
                                      index=index)
@@ -1841,15 +1843,15 @@ class PickerItem(DefaultPolygon):
             index += 1
 
         # Update handles list
-        self.handles = new_handles
-        self.polygon.points = new_handles
+        self.handles=new_handles
+        self.polygon.points=new_handles
 
         # Set current visibility status
         for handle in self.handles:
             handle.setVisible(self.get_edit_status())
 
         # Set new point count
-        self.point_count = len(self.handles)
+        self.point_count=len(self.handles)
 
     # =========================================================================
     # Mouse events ---
@@ -1857,7 +1859,7 @@ class PickerItem(DefaultPolygon):
         '''Update tooltip on hoover with associated controls in edit mode
         '''
         if __EDIT_MODE__.get():
-            text = '\n'.join(self.get_controls())
+            text='\n'.join(self.get_controls())
             self.setToolTip(text)
         DefaultPolygon.hoverEnterEvent(self, event)
 
@@ -1866,7 +1868,7 @@ class PickerItem(DefaultPolygon):
 
     def mouseMoveEvent(self, event):
         # print event.pos()
-        gfx_event = event
+        gfx_event=event
         if event.buttons() == QtCore.Qt.LeftButton and __EDIT_MODE__.get():
             if self.currently_selected:
                 [item.mouseMoveEvent_offset(event) for item in
@@ -1880,7 +1882,7 @@ class PickerItem(DefaultPolygon):
         if __EDIT_MODE__.get():
             self.get_delta_from_point(event.pos())
             # this allows for maintaining offset while dragging multiple
-            self.currently_selected = [item for item in
+            self.currently_selected=[item for item in
                                        self.parent().get_picker_items()
                                        if item.polygon.selected]
             if self.currently_selected:
@@ -1900,7 +1902,7 @@ class PickerItem(DefaultPolygon):
                 select_picker_controls([self], event, modifiers=None)
 
         # Set focus to maya window
-        maya_window = pyqt.maya_main_window()
+        maya_window=pyqt.maya_main_window()
         if maya_window:
             maya_window.setFocus()
 
@@ -1918,22 +1920,22 @@ class PickerItem(DefaultPolygon):
         if __EDIT_MODE__.get():
             return
         if modifiers:
-            modifiers = modifiers
+            modifiers=modifiers
         else:
-            modifiers = event.modifiers()
-        modifier = None
+            modifiers=event.modifiers()
+        modifier=None
 
         # Shift cases (toggle)
         if modifiers == QtCore.Qt.ShiftModifier:
-            modifier = "shift"
+            modifier="shift"
 
         # Controls case
         if modifiers == QtCore.Qt.ControlModifier:
-            modifier = "control"
+            modifier="control"
 
         # Alt case (remove)
         if modifiers == QtCore.Qt.AltModifier:
-            modifier = "alt"
+            modifier="alt"
 
         # Call action
         self.select_associated_controls(modifier=modifier)
@@ -1971,60 +1973,60 @@ class PickerItem(DefaultPolygon):
         '''Context menu (right click) in edition mode
         '''
         # Init context menu
-        menu = QtWidgets.QMenu(self.parent())
+        menu=QtWidgets.QMenu(self.parent())
 
         # Build edit context menu
-        options_action = QtWidgets.QAction("Options", None)
+        options_action=QtWidgets.QAction("Options", None)
         options_action.triggered.connect(self.edit_options)
         menu.addAction(options_action)
 
-        handles_action = QtWidgets.QAction("Toggle handles", None)
+        handles_action=QtWidgets.QAction("Toggle handles", None)
         handles_action.triggered.connect(self.toggle_edit_status)
         menu.addAction(handles_action)
 
         menu.addSeparator()
 
         # Shape options menu
-        shape_menu = QtWidgets.QMenu(menu)
+        shape_menu=QtWidgets.QMenu(menu)
         shape_menu.setTitle("Shape")
 
-        move_action = QtWidgets.QAction("Move to center", None)
+        move_action=QtWidgets.QAction("Move to center", None)
         move_action.triggered.connect(self.move_to_center)
         shape_menu.addAction(move_action)
 
-        shp_mirror_action = QtWidgets.QAction("Mirror shape", None)
+        shp_mirror_action=QtWidgets.QAction("Mirror shape", None)
         shp_mirror_action.triggered.connect(self.mirror_shape)
         shape_menu.addAction(shp_mirror_action)
 
-        color_mirror_action = QtWidgets.QAction("Mirror color", None)
+        color_mirror_action=QtWidgets.QAction("Mirror color", None)
         color_mirror_action.triggered.connect(self.mirror_color)
         shape_menu.addAction(color_mirror_action)
 
         menu.addMenu(shape_menu)
 
-        move_back_action = QtWidgets.QAction("Move to back", None)
+        move_back_action=QtWidgets.QAction("Move to back", None)
         move_back_action.triggered.connect(self.move_to_back)
         menu.addAction(move_back_action)
 
-        move_front_action = QtWidgets.QAction("Move to front", None)
+        move_front_action=QtWidgets.QAction("Move to front", None)
         move_front_action.triggered.connect(self.move_to_front)
         menu.addAction(move_front_action)
 
         menu.addSeparator()
 
         # Copy handling
-        copy_action = QtWidgets.QAction("Copy", None)
+        copy_action=QtWidgets.QAction("Copy", None)
         copy_action.triggered.connect(self.copy_event)
         menu.addAction(copy_action)
 
-        paste_action = QtWidgets.QAction("Paste", None)
+        paste_action=QtWidgets.QAction("Paste", None)
         if DataCopyDialog.__DATA__:
             paste_action.triggered.connect(self.past_event)
         else:
             paste_action.setEnabled(False)
         menu.addAction(paste_action)
 
-        paste_options_action = QtWidgets.QAction("Paste Options", None)
+        paste_options_action=QtWidgets.QAction("Paste Options", None)
         if DataCopyDialog.__DATA__:
             paste_options_action.triggered.connect(self.past_option_event)
         else:
@@ -2034,50 +2036,49 @@ class PickerItem(DefaultPolygon):
         menu.addSeparator()
 
         # Paste position actions
-        paste_x_action = QtWidgets.QAction("Paste Pos X", None)
+        paste_x_action=QtWidgets.QAction("Paste Pos X", None)
         if DataCopyDialog.__DATA__:
             paste_x_action.triggered.connect(self.past_x_event)
         else:
             paste_x_action.setEnabled(False)
         menu.addAction(paste_x_action)
 
-        paste_y_action = QtWidgets.QAction("Paste Pos Y", None)
+        paste_y_action=QtWidgets.QAction("Paste Pos Y", None)
         if DataCopyDialog.__DATA__:
             paste_y_action.triggered.connect(self.past_y_event)
         else:
             paste_y_action.setEnabled(False)
         menu.addAction(paste_y_action)
 
-
         menu.addSeparator()
 
         # Duplicate options
-        duplicate_action = QtWidgets.QAction("Duplicate", None)
+        duplicate_action=QtWidgets.QAction("Duplicate", None)
         duplicate_action.triggered.connect(self.duplicate_selected)
         menu.addAction(duplicate_action)
 
-        mirror_dup_action = QtWidgets.QAction("Duplicate/mirror", None)
+        mirror_dup_action=QtWidgets.QAction("Duplicate/mirror", None)
         mirror_dup_action.triggered.connect(self.duplicate_and_mirror_selected)
         menu.addAction(mirror_dup_action)
 
         menu.addSeparator()
 
         # Delete
-        remove_action = QtWidgets.QAction("Remove", None)
+        remove_action=QtWidgets.QAction("Remove", None)
         remove_action.triggered.connect(self.remove_selected)
         menu.addAction(remove_action)
 
         menu.addSeparator()
 
         # Control association
-        ctrls_menu = QtWidgets.QMenu(menu)
+        ctrls_menu=QtWidgets.QMenu(menu)
         ctrls_menu.setTitle("Ctrls Association")
 
-        select_action = QtWidgets.QAction("Select", None)
+        select_action=QtWidgets.QAction("Select", None)
         select_action.triggered.connect(self.select_associated_controls)
         ctrls_menu.addAction(select_action)
 
-        replace_action = QtWidgets.QAction("Replace with selection", None)
+        replace_action=QtWidgets.QAction("Replace with selection", None)
         replace_action.triggered.connect(self.replace_controls_selection)
         ctrls_menu.addAction(replace_action)
 
@@ -2086,14 +2087,14 @@ class PickerItem(DefaultPolygon):
         # Open context menu under mouse
         # offset position to prevent accidental mouse release on menu
         # OFFSET
-        offseted_pos = event.pos() + QtCore.QPoint(5, 0)
+        offseted_pos=event.pos() + QtCore.QPoint(5, 0)
         menu.exec_(offseted_pos)
 
     def default_context_menu(self, event):
         '''Context menu (right click) out of edition mode (animation)
         '''
         # Init context menu
-        menu = QtWidgets.QMenu(self.parent())
+        menu=QtWidgets.QMenu(self.parent())
 
         # Add reset action
         # reset_action = QtWidgets.QAction("Reset", None)
@@ -2101,7 +2102,7 @@ class PickerItem(DefaultPolygon):
         # menu.addAction(reset_action)
 
         # Add custom actions
-        actions = self._get_custom_action_menus()
+        actions=self._get_custom_action_menus()
         for action in actions:
             menu.addAction(action)
 
@@ -2111,15 +2112,15 @@ class PickerItem(DefaultPolygon):
 
         # Open context menu under mouse
         # offset position to prevent accidental mouse release on menu
-        offseted_pos = event.pos() + QtCore.QPoint(5, 0)
+        offseted_pos=event.pos() + QtCore.QPoint(5, 0)
         # scene_pos = self.mapToScene(offseted_pos)
         # view_pos = self.parent().mapFromScene(scene_pos)
         # screen_pos = self.parent().mapToGlobal(view_pos)
         menu.exec_(offseted_pos)
 
     def get_init_env(self):
-        env = self.get_exec_env()
-        env["__INIT__"] = True
+        env=self.get_exec_env()
+        env["__INIT__"]=True
 
         return env
 
@@ -2130,22 +2131,22 @@ class PickerItem(DefaultPolygon):
         and __NAMESPACE__ variables)
         '''
         # Init env
-        env = {}
+        env={}
 
         # Add controls vars
-        env["__CONTROLS__"] = self.get_controls()
-        ctrls = self.get_controls()
-        env["__FLATCONTROLS__"] = maya_handlers.get_flattened_nodes(ctrls)
-        env["__NAMESPACE__"] = self.get_namespace()
-        env["__SELF__"] = self
-        env["__INIT__"] = False
+        env["__CONTROLS__"]=self.get_controls()
+        ctrls=self.get_controls()
+        env["__FLATCONTROLS__"]=maya_handlers.get_flattened_nodes(ctrls)
+        env["__NAMESPACE__"]=self.get_namespace()
+        env["__SELF__"]=self
+        env["__INIT__"]=False
 
         return env
 
     def _get_custom_action_menus(self):
         # Init action list to fix loop problem where qmenu only
         # show last action when using the same variable name ...
-        actions = []
+        actions=[]
 
         # Define custom exec cmd wrapper
         def wrapper(cmd):
@@ -2155,7 +2156,7 @@ class PickerItem(DefaultPolygon):
             return custom_eval
 
         # Get active controls custom menus
-        custom_data = self.get_custom_menus()
+        custom_data=self.get_custom_menus()
         if not custom_data:
             return actions
 
@@ -2180,7 +2181,7 @@ class PickerItem(DefaultPolygon):
                 pass
 
         # Init new window
-        self.edit_window = ItemOptionsWindow(parent=self.main_window,
+        self.edit_window=ItemOptionsWindow(parent=self.main_window,
                                              picker_item=self)
 
         # Show window
@@ -2190,7 +2191,7 @@ class PickerItem(DefaultPolygon):
     def set_edit_status(self, status):
         '''Set picker item edit status (handle visibility etc.)
         '''
-        self._edit_status = status
+        self._edit_status=status
 
         for handle in self.handles:
             handle.setVisible(status)
@@ -2243,10 +2244,10 @@ class PickerItem(DefaultPolygon):
         '''Move picker item to scene front
         '''
         # Get current scene
-        scene = self.scene()
+        scene=self.scene()
 
         # Move to temp scene
-        tmp_scene = QtWidgets.QGraphicsScene()
+        tmp_scene=QtWidgets.QGraphicsScene()
         tmp_scene.addItem(self)
 
         # Add to current scene (will be put on top)
@@ -2259,7 +2260,7 @@ class PickerItem(DefaultPolygon):
         '''Move picker item to background level behind other items
         '''
         # Get picker Items
-        picker_items = self.scene().get_picker_items()
+        picker_items=self.scene().get_picker_items()
 
         # Reverse list since items are returned front to back
         picker_items.reverse()
@@ -2279,7 +2280,7 @@ class PickerItem(DefaultPolygon):
         self.setPos(0, 0)
 
     def remove_selected(self):
-        selected_pickers = self.scene().get_selected_items()
+        selected_pickers=self.scene().get_selected_items()
         if self not in selected_pickers:
             selected_pickers.append(self)
         [picker.remove() for picker in selected_pickers]
@@ -2290,7 +2291,7 @@ class PickerItem(DefaultPolygon):
         self.deleteLater()
 
     def get_delta_from_point(self, point):
-        self.cursor_delta = self.pos() - point
+        self.cursor_delta=self.pos() - point
         return self.cursor_delta
 
     # =========================================================================
@@ -2309,21 +2310,21 @@ class PickerItem(DefaultPolygon):
     def mirror_color(self):
         '''Will reverse red/bleu rgb values for the polygon color
         '''
-        old_color = self.get_color()
-        new_color = QtGui.QColor(old_color.blue(),
+        old_color=self.get_color()
+        new_color=QtGui.QColor(old_color.blue(),
                                  old_color.green(),
                                  old_color.red(),
                                  alpha=old_color.alpha())
         self.set_color(new_color)
 
     def duplicate_selected(self, *args, **kwargs):
-        selected_pickers = self.scene().get_selected_items()
+        selected_pickers=self.scene().get_selected_items()
         if self not in selected_pickers:
             selected_pickers.append(self)
-        new_pickers = []
+        new_pickers=[]
         for picker in selected_pickers:
-            new_picker = picker.duplicate()
-            new_pos = QtCore.QPointF(picker.pos().x() * .9, picker.pos().y() * .9)
+            new_picker=picker.duplicate()
+            new_pos=QtCore.QPointF(picker.pos().x() * .9, picker.pos().y() * .9)
             new_picker.setPos(new_pos)
             new_pickers.append(new_picker)
         self.scene().select_picker_items(new_pickers)
@@ -2332,37 +2333,37 @@ class PickerItem(DefaultPolygon):
         '''Will create a new picker item and copy data over.
         '''
         # Create new picker item
-        new_item = PickerItem()
+        new_item=PickerItem()
         new_item.setParent(self.parent())
         self.scene().addItem(new_item)
 
         # Copy data over
-        data = self.get_data()
+        data=self.get_data()
         new_item.set_data(data)
 
         return new_item
 
     def duplicate_and_mirror_selected(self):
-        selected_pickers = self.scene().get_selected_items()
+        selected_pickers=self.scene().get_selected_items()
         if self not in selected_pickers:
             selected_pickers.append(self)
 
-        search = None
-        replace = None
-        new_pickers = []
+        search=None
+        replace=None
+        new_pickers=[]
         for picker in selected_pickers:
             if picker.get_controls() and not search and not replace:
-                search, replace, ok = SearchAndReplaceDialog.get()
+                search, replace, ok=SearchAndReplaceDialog.get()
                 if not ok:
                     break
-            new_picker = picker.duplicate_and_mirror(search, replace)
+            new_picker=picker.duplicate_and_mirror(search, replace)
             new_pickers.append(new_picker)
         self.scene().select_picker_items(new_pickers)
 
     def duplicate_and_mirror(self, search=None, replace=None):
         '''Duplicate and mirror picker item
         '''
-        new_item = self.duplicate()
+        new_item=self.duplicate()
         new_item.mirror_color()
         new_item.mirror_position()
         new_item.mirror_shape()
@@ -2378,7 +2379,7 @@ class PickerItem(DefaultPolygon):
             x (bool, optional): if true paste X position
             y (bool, optional): if true paste Y position
         """
-        selected_pickers = self.scene().get_selected_items()
+        selected_pickers=self.scene().get_selected_items()
         if self not in selected_pickers:
             selected_pickers.append(self)
         for picker in selected_pickers:
@@ -2392,7 +2393,7 @@ class PickerItem(DefaultPolygon):
     def past_event(self):
         '''Apply previously stored pickerItem data
         '''
-        selected_pickers = self.scene().get_selected_items()
+        selected_pickers=self.scene().get_selected_items()
         if self not in selected_pickers:
             selected_pickers.append(self)
         for picker in selected_pickers:
@@ -2424,7 +2425,7 @@ class PickerItem(DefaultPolygon):
 
         # Scale position
         if world:
-            factor = QtGui.QTransform().scale(x, y)
+            factor=QtGui.QTransform().scale(x, y)
             self.setPos(self.pos() * factor)
 
         self.update()
@@ -2435,10 +2436,10 @@ class PickerItem(DefaultPolygon):
         return self.custom_action
 
     def set_custom_action_mode(self, state):
-        self.custom_action = state
+        self.custom_action=state
 
     def set_custom_action_script(self, cmd):
-        self.custom_action_script = cmd
+        self.custom_action_script=cmd
 
     def get_custom_action_script(self):
         return self.custom_action_script
@@ -2453,7 +2454,7 @@ class PickerItem(DefaultPolygon):
     def set_control_list(self, ctrls=[]):
         '''Update associated control list
         '''
-        self.controls = ctrls
+        self.controls=ctrls
 
     def get_controls(self, with_namespace=True):
         '''Return associated controls
@@ -2463,14 +2464,14 @@ class PickerItem(DefaultPolygon):
             return self.controls
 
         # Get namespace
-        namespace = self.get_namespace()
+        namespace=self.get_namespace()
 
         # No namespace, return nodes
         if not namespace:
             return self.controls
 
         # Prefix nodes with namespace
-        nodes = []
+        nodes=[]
         for node in self.controls:
             nodes.append("{}:{}".format(namespace, node))
 
@@ -2499,20 +2500,20 @@ class PickerItem(DefaultPolygon):
             Bool: if successful
         '''
         # Open Search and replace dialog window
-        ok = True
+        ok=True
         if not search or not replace:
-            search, replace, ok = SearchAndReplaceDialog.get()
+            search, replace, ok=SearchAndReplaceDialog.get()
 
         if not ok:
             return False
 
         # Parse controls
-        node_missing = False
-        controls = self.get_controls()[:]
+        node_missing=False
+        controls=self.get_controls()[:]
         for i, ctrl in enumerate(controls):
-            controls[i] = re.sub(search, replace, ctrl)
+            controls[i]=re.sub(search, replace, ctrl)
             if not cmds.objExists(controls[i]):
-                node_missing = True
+                node_missing=True
 
         # Print warning
         if node_missing:
@@ -2541,7 +2542,7 @@ class PickerItem(DefaultPolygon):
         '''Add selected controls to control list
         '''
         # Get selection
-        sel = cmds.ls(sl=True)
+        sel=cmds.ls(sl=True)
 
         # Add to stored list
         for ctrl in sel:
@@ -2555,7 +2556,7 @@ class PickerItem(DefaultPolygon):
         (Only works with polygon that have a single associated maya_node)
         '''
         # Get controls associated nodes
-        controls = self.get_controls()
+        controls=self.get_controls()
 
         # Abort if not single control polygon
         if not len(controls) == 1:
@@ -2579,7 +2580,7 @@ class PickerItem(DefaultPolygon):
     def set_custom_menus(self, menus):
         '''Set custom menu list for current poly data
         '''
-        self.custom_menus = list(menus)
+        self.custom_menus=list(menus)
 
     def get_custom_menus(self):
         '''Return current menu list for current poly data
@@ -2593,12 +2594,12 @@ class PickerItem(DefaultPolygon):
         '''
         # Set color
         if "color" in data:
-            color = QtGui.QColor(*data["color"])
+            color=QtGui.QColor(*data["color"])
             self.set_color(color)
 
         # Set position
         if "position" in data:
-            position = data.get("position", [0, 0])
+            position=data.get("position", [0, 0])
             self.setPos(*position)
 
         # Set handles
@@ -2609,7 +2610,7 @@ class PickerItem(DefaultPolygon):
         if "text" in data:
             self.set_text(data["text"])
             self.set_text_size(data["text_size"])
-            color = QtGui.QColor(*data["text_color"])
+            color=QtGui.QColor(*data["text_color"])
             self.set_text_color(color)
 
         # Set action mode
@@ -2631,37 +2632,37 @@ class PickerItem(DefaultPolygon):
         '''Get picker item data in dictionary form
         '''
         # Init data dict
-        data = {}
+        data={}
 
         # Add polygon color
-        data["color"] = self.get_color().getRgb()
+        data["color"]=self.get_color().getRgb()
 
         # Add position
-        data["position"] = [self.x(), self.y()]
+        data["position"]=[self.x(), self.y()]
 
         # Add handles datas
-        handles_data = []
+        handles_data=[]
         for handle in self.handles:
             handles_data.append([handle.x(), handle.y()])
-        data["handles"] = handles_data
+        data["handles"]=handles_data
 
         # Add mode data
         if self.get_custom_action_mode():
-            data["action_mode"] = True
-            data["action_script"] = self.get_custom_action_script()
+            data["action_mode"]=True
+            data["action_script"]=self.get_custom_action_script()
 
         # Add controls data
         if self.get_controls():
-            data["controls"] = self.get_controls(with_namespace=False)
+            data["controls"]=self.get_controls(with_namespace=False)
 
         # Add custom menus data
         if self.get_custom_menus():
-            data["menus"] = self.get_custom_menus()
+            data["menus"]=self.get_custom_menus()
 
         if self.get_text():
-            data["text"] = self.get_text()
-            data["text_size"] = self.get_text_size()
-            data["text_color"] = self.get_text_color().getRgb()
+            data["text"]=self.get_text()
+            data["text_size"]=self.get_text_size()
+            data["text_color"]=self.get_text_color().getRgb()
 
         return data
 
@@ -2671,8 +2672,8 @@ class State():
     '''
 
     def __init__(self, state, name=False):
-        self.state = state
-        self.name = name
+        self.state=state
+        self.name=name
 
     def __lt__(self, other):
         '''Override for "sort" function
@@ -2683,40 +2684,40 @@ class State():
         return self.state
 
     def set(self, state):
-        self.state = state
+        self.state=state
 
 
 class DataCopyDialog(QtWidgets.QDialog):
     '''PickerItem data copying dialog handler
     '''
-    __DATA__ = {}
+    __DATA__={}
 
-    __STATES__ = []
-    __DO_POS__ = State(False, 'position')
+    __STATES__=[]
+    __DO_POS__=State(False, 'position')
     __STATES__.append(__DO_POS__)
-    __DO_COLOR__ = State(True, 'color')
+    __DO_COLOR__=State(True, 'color')
     __STATES__.append(__DO_COLOR__)
-    __DO_ACTION_MODE__ = State(True, 'action_mode')
+    __DO_ACTION_MODE__=State(True, 'action_mode')
     __STATES__.append(__DO_ACTION_MODE__)
-    __DO_ACTION_SCRIPT__ = State(True, 'action_script')
+    __DO_ACTION_SCRIPT__=State(True, 'action_script')
     __STATES__.append(__DO_ACTION_SCRIPT__)
-    __DO_HANDLES__ = State(True, 'handles')
+    __DO_HANDLES__=State(True, 'handles')
     __STATES__.append(__DO_HANDLES__)
-    __DO_TEXT__ = State(True, 'text')
+    __DO_TEXT__=State(True, 'text')
     __STATES__.append(__DO_TEXT__)
-    __DO_TEXT_SIZE__ = State(True, 'text_size')
+    __DO_TEXT_SIZE__=State(True, 'text_size')
     __STATES__.append(__DO_TEXT_SIZE__)
-    __DO_TEXT_COLOR__ = State(True, 'text_color')
+    __DO_TEXT_COLOR__=State(True, 'text_color')
     __STATES__.append(__DO_TEXT_COLOR__)
-    __DO_CTRLS__ = State(True, 'controls')
+    __DO_CTRLS__=State(True, 'controls')
     __STATES__.append(__DO_CTRLS__)
-    __DO_MENUS__ = State(True, 'menus')
+    __DO_MENUS__=State(True, 'menus')
     __STATES__.append(__DO_MENUS__)
 
     def __init__(self,
                  parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.apply = False
+        self.apply=False
         self.setup()
 
     def setup(self):
@@ -2725,26 +2726,26 @@ class DataCopyDialog(QtWidgets.QDialog):
         self.setWindowTitle('Copy/Paste')
 
         # Add layout
-        self.main_layout = QtWidgets.QVBoxLayout(self)
+        self.main_layout=QtWidgets.QVBoxLayout(self)
 
         # Add data field options
         for state in self.__STATES__:
-            label_name = state.name.capitalize().replace('_', ' ')
-            cb = basic.CallbackCheckBoxWidget(callback=self.check_box_event,
+            label_name=state.name.capitalize().replace('_', ' ')
+            cb=basic.CallbackCheckBoxWidget(callback=self.check_box_event,
                                               value=state.get(),
                                               label=label_name,
                                               state_obj=state)
             self.main_layout.addWidget(cb)
 
         # Add buttons
-        btn_layout = QtWidgets.QHBoxLayout()
+        btn_layout=QtWidgets.QHBoxLayout()
         self.main_layout.addLayout(btn_layout)
 
-        ok_btn = basic.CallbackButton(callback=self.accept_event)
+        ok_btn=basic.CallbackButton(callback=self.accept_event)
         ok_btn.setText("Ok")
         btn_layout.addWidget(ok_btn)
 
-        cancel_btn = basic.CallbackButton(callback=self.cancel_event)
+        cancel_btn=basic.CallbackButton(callback=self.cancel_event)
         cancel_btn.setText("Cancel")
         btn_layout.addWidget(cancel_btn)
 
@@ -2756,7 +2757,7 @@ class DataCopyDialog(QtWidgets.QDialog):
     def accept_event(self):
         '''Accept button event
         '''
-        self.apply = True
+        self.apply=True
 
         self.accept()
         self.close()
@@ -2764,7 +2765,7 @@ class DataCopyDialog(QtWidgets.QDialog):
     def cancel_event(self):
         '''Cancel button event
         '''
-        self.apply = False
+        self.apply=False
         self.close()
 
     @classmethod
@@ -2773,7 +2774,7 @@ class DataCopyDialog(QtWidgets.QDialog):
         Default method used to run the dialog input window
         Will open the dialog window and return input texts.
         '''
-        win = cls()
+        win=cls()
         win.exec_()
         win.raise_()
 
@@ -2791,27 +2792,27 @@ class DataCopyDialog(QtWidgets.QDialog):
             y (bool, optional): if true will set Y position
         """
         # Sanity check
-        msg = "Item is not an PickerItem instance"
+        msg="Item is not an PickerItem instance"
         assert isinstance(item, PickerItem), msg
         assert DataCopyDialog.__DATA__, "No stored data to paste"
 
-        keys = []
+        keys=[]
         keys.append("position")
 
         # Build valid data
-        data = {}
+        data={}
         for key in keys:
             if key not in DataCopyDialog.__DATA__:
                 continue
-            data[key] = DataCopyDialog.__DATA__[key]
+            data[key]=DataCopyDialog.__DATA__[key]
 
         # Get picker item data
-        item_data = item.get_data()
+        item_data=item.get_data()
 
         if x:
-            data['position'][1] = item_data['position'][1]
+            data['position'][1]=item_data['position'][1]
         if y:
-            data['position'][0] = item_data['position'][0]
+            data['position'][0]=item_data['position'][0]
         item.set_data(data)
 
     @staticmethod
@@ -2822,23 +2823,23 @@ class DataCopyDialog(QtWidgets.QDialog):
             item (object, optional): Picker object
         """
         # Sanity check
-        msg = "Item is not an PickerItem instance"
+        msg="Item is not an PickerItem instance"
         assert isinstance(item, PickerItem), msg
         assert DataCopyDialog.__DATA__, "No stored data to paste"
 
         # Filter data keys to copy
-        keys = []
+        keys=[]
         for state in DataCopyDialog.__STATES__:
             if not state.get():
                 continue
             keys.append(state.name)
 
         # Build valid data
-        data = {}
+        data={}
         for key in keys:
             if key not in DataCopyDialog.__DATA__:
                 continue
-            data[key] = DataCopyDialog.__DATA__[key]
+            data[key]=DataCopyDialog.__DATA__[key]
 
         # Get picker item data
         item.set_data(data)
@@ -2848,13 +2849,13 @@ class DataCopyDialog(QtWidgets.QDialog):
         '''Will get and store data for specified item
         '''
         # Sanity check
-        msg = "Item is not an PickerItem instance"
+        msg="Item is not an PickerItem instance"
         assert isinstance(item, PickerItem), msg
 
         # Get picker item data
-        data = item.get_data()
+        data=item.get_data()
 
         # Store data
-        DataCopyDialog.__DATA__ = data
+        DataCopyDialog.__DATA__=data
 
         return data
