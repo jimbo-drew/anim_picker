@@ -1463,7 +1463,7 @@ class Polygon(DefaultPolygon):
     than QtWidgets.QGraphicsItem for signal support)
     '''
     __DEFAULT_COLOR__ = QtGui.QColor(200, 200, 200, 180)
-    __DEFAULT_SELECT_COLOR__ = QtGui.QColor(100, 214, 138, 180)
+    __DEFAULT_SELECT_COLOR__ = QtGui.QColor(230, 230, 230, 240)
 
     def __init__(self, parent=None, points=[], color=None):
 
@@ -1540,7 +1540,7 @@ class Polygon(DefaultPolygon):
 
         # Border status feedback
         border_pen = QtGui.QPen(self.__DEFAULT_SELECT_COLOR__)
-        border_pen.setWidthF(1.5)
+        border_pen.setWidthF(2)
 
         if self.selected:
             painter.setPen(border_pen)
