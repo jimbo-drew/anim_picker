@@ -11,6 +11,7 @@ def install():
     pm.menuItem(divider=True)
     commands = (
         ("Anim Picker", partial(anim_picker.load, False, False)),
+        ("Anim Picker - Dockable", partial(anim_picker.load, False, True)),
         ("-----", None),
         ("Edit Anim Picker", partial(anim_picker.load, True, False))
     )
