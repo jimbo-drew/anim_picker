@@ -1861,7 +1861,8 @@ class PickerItem(DefaultPolygon):
         if __EDIT_MODE__.get():
             text = '\n'.join(self.get_controls())
             self.setToolTip(text)
-        DefaultPolygon.hoverEnterEvent(self, event)
+        # DefaultPolygon.hoverEnterEvent(self, event)
+        super(PickerItem, self).hoverEnterEvent(event)
 
     def mouseMoveEvent_offset(self, event):
         self.setPos(event.scenePos() + self.cursor_delta)
@@ -2077,6 +2078,10 @@ class PickerItem(DefaultPolygon):
         select_action = QtWidgets.QAction("Select", None)
         select_action.triggered.connect(self.select_associated_controls)
         ctrls_menu.addAction(select_action)
+
+        select_all_action = QtWidgets.QAction("Select all", None)
+        select_all_action.triggered.connect(self.select_all_associated_controls)
+        ctrls_menu.addAction(select_all_action)
 
         replace_action = QtWidgets.QAction("Replace with selection", None)
         replace_action.triggered.connect(self.replace_controls_selection)
@@ -2531,6 +2536,14 @@ class PickerItem(DefaultPolygon):
         '''
         maya_handlers.select_nodes(self.get_controls(),
                                    modifier=modifier)
+
+    def select_all_associated_controls(self, modifier=None):
+        '''Will select maya associated controls
+        '''
+        controls = []
+        for picker in self.parent().scene().get_selected_items():
+            controls.extend(picker.get_controls())
+        maya_handlers.select_nodes(controls, modifier=modifier)
 
     def replace_controls_selection(self):
         '''Will replace controls association with current selection

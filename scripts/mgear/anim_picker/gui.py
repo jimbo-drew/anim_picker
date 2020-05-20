@@ -389,6 +389,14 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             add_action.triggered.connect(self.add_picker_item)
             menu.addAction(add_action)
 
+            add_action1 = QtWidgets.QAction("Add with selected", None)
+            add_action1.triggered.connect(self.add_picker_item_selected)
+            menu.addAction(add_action1)
+
+            add_action2 = QtWidgets.QAction("Add item per selected", None)
+            add_action2.triggered.connect(self.add_picker_item_per_selected)
+            menu.addAction(add_action2)
+
             toggle_handles_action = QtWidgets.QAction("Toggle all handles",
                                                       None)
             func = self.toggle_all_handles_event
@@ -468,6 +476,40 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             ctrl.setPos(0, 0)
 
         return ctrl
+
+    def add_picker_item_selected(self, event=None):
+        '''Add new PickerItem to current view
+        '''
+        ctrl = self.add_picker_item(event=event)
+
+        data = {}
+        selected = cmds.ls(sl=True) or []
+        data["controls"] = selected
+        ctrl.set_data(data)
+        ctrl.set_selected_state(True)
+
+        return ctrl
+
+    def add_picker_item_per_selected(self, event=None):
+        '''Add new PickerItem to current view
+        '''
+        selection = cmds.ls(sl=True) or []
+        if not selection:
+            return
+        created_ctrls = []
+        y_start = 0
+        y_increment = -35
+        for selected in selection:
+            ctrl = self.add_picker_item(event=event)
+            data = {}
+            data["controls"] = [selected]
+            data["position"] = [0, y_start]
+            y_start = y_start + y_increment
+            ctrl.set_data(data)
+            ctrl.set_selected_state(True)
+            created_ctrls.append(ctrl)
+
+        return created_ctrls
 
     def toggle_all_handles_event(self, event=None):
         new_status = None
@@ -856,7 +898,6 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # Setting object name makes docking not useable? da fuck
         # self.setObjectName(self.__OBJ_NAME__)
         self.setWindowTitle(self.__TITLE__)
-        self.resize(self.default_width, self.default_height)
 
         # Add main widget and vertical layout
         self.main_vertical_layout = QtWidgets.QVBoxLayout()
@@ -874,17 +915,47 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # if the window is not dockable we can control the opacity
         # MayaQWidgetDockableMixin overrides setWindowsOpacity
         if not self.is_dockable:
+            opacity_layout = QtWidgets.QHBoxLayout()
             self.opacity_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
             self.opacity_slider.setRange(10, 100)
             self.opacity_slider.setValue(100)
             self.opacity_slider.valueChanged.connect(self.change_opacity)
-            self.main_vertical_layout.addWidget(self.opacity_slider)
+            self.auto_opacity_btn = QtWidgets.QPushButton("Auto opacity")
+            self.auto_opacity_btn.setCheckable(True)
+            self.auto_opacity_btn.toggled.connect(self.change_opacity)
+            self.installEventFilter(self)
+            opacity_layout.addWidget(self.opacity_slider)
+            opacity_layout.addWidget(self.auto_opacity_btn)
+            self.main_vertical_layout.addLayout(opacity_layout)
 
         self.add_overlays()
-
+        self.resize(self.default_width, self.default_height)
         # Creating is done (workaround for signals being fired
         # off before everything is created)
         self.ready = True
+
+    def eventFilter(self, QObject, event):
+        """event filter for general override
+        current use
+        -Auto opacityfilter
+
+        Args:
+            QObject (QObject): the object getting the event
+            event (QEvent): event type
+
+        Returns:
+            bool: accepting event or not
+        """
+        if event.type() == QtCore.QEvent.Type.Enter:
+            if self.auto_opacity_btn.isChecked():
+                self.setWindowOpacity(100)
+                return True
+        elif event.type() == QtCore.QEvent.Type.Leave:
+            if self.auto_opacity_btn.isChecked():
+                self.change_opacity()
+                return True
+        else:
+            return False
 
     def change_opacity(self):
         """Change the  windows opacity
@@ -1077,16 +1148,16 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
             return
 
         size = self.size()
-        pos = self.pos()
+        # pos = self.pos()
 
         self.about_widget.resize(size)
-        self.about_widget.move(pos)
+        # self.about_widget.move(pos)
 
         self.save_widget.resize(size)
-        self.save_widget.move(pos)
+        # self.save_widget.move(pos)
 
         self.load_widget.resize(size)
-        self.save_widget.move(pos)
+        # self.load_widget.move(pos)
 
         return super(MainDockWindow, self).resizeEvent(event)
 
