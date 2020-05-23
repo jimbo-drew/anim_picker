@@ -30,6 +30,12 @@ reload(picker_widgets)
 reload(overlay_widgets)
 
 
+try:
+    _CLIPBOARD
+except NameError as e:
+    _CLIPBOARD = []
+
+
 # =============================================================================
 # Dependencies ---
 # =============================================================================
@@ -405,6 +411,18 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
             menu.addSeparator()
 
+            # this copy is currently only supported when not hovering a picker
+            copy_action = QtWidgets.QAction("Copy (Multi)", None)
+            copy_action.triggered.connect(self.copy_event)
+            menu.addAction(copy_action)
+
+            # this paste is only supported when not hovering
+            paste_action = QtWidgets.QAction("Paste (Multi)", None)
+            paste_action.triggered.connect(self.paste_event)
+            menu.addAction(paste_action)
+
+            menu.addSeparator()
+
             background_action = QtWidgets.QAction("Set background image", None)
             background_action.triggered.connect(self.set_background_event)
             menu.addAction(background_action)
@@ -510,6 +528,24 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             created_ctrls.append(ctrl)
 
         return created_ctrls
+
+    def copy_event(self):
+        """reset the clipboard and populate the list with picker data for paste
+        """
+        _CLIPBOARD = []
+        selected_pickers = self.scene().get_selected_items()
+        for picker in selected_pickers:
+            _CLIPBOARD.append(picker.get_data())
+
+    def paste_event(self):
+        """create new anim pickers based off the data in the clipboard
+        Make new pickers selected
+        """
+        [x.set_selected_state(False) for x in self.scene().get_selected_items()]
+        for data in _CLIPBOARD:
+            ctrl = self.add_picker_item(event=None)
+            ctrl.set_data(data)
+            ctrl.set_selected_state(True)
 
     def toggle_all_handles_event(self, event=None):
         new_status = None
