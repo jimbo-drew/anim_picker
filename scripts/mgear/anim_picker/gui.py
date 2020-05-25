@@ -532,6 +532,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
     def copy_event(self):
         """reset the clipboard and populate the list with picker data for paste
         """
+        global _CLIPBOARD
         _CLIPBOARD = []
         selected_pickers = self.scene().get_selected_items()
         for picker in selected_pickers:
@@ -541,6 +542,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         """create new anim pickers based off the data in the clipboard
         Make new pickers selected
         """
+        global _CLIPBOARD
         [x.set_selected_state(False) for x in self.scene().get_selected_items()]
         for data in _CLIPBOARD:
             ctrl = self.add_picker_item(event=None)
