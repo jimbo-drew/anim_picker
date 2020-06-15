@@ -5,6 +5,7 @@
 
 # python
 import os
+from functools import partial
 
 # dcc
 from maya import cmds
@@ -14,6 +15,7 @@ from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 # mgear
 from mgear.core import pyqt, callbackManager
 from mgear.vendor.Qt import QtCore, QtWidgets, QtOpenGL, QtGui
+# from PySide2 import QtCore, QtWidgets, QtOpenGL, QtGui
 
 # module
 from . import picker_node
@@ -24,16 +26,54 @@ from mgear.anim_picker.widgets import overlay_widgets
 from handlers import __EDIT_MODE__
 from handlers import __SELECTION__
 
+# debugging
 reload(basic)
 reload(picker_node)
 reload(picker_widgets)
 reload(overlay_widgets)
 
 
+# constants -------------------------------------------------------------------
 try:
     _CLIPBOARD
 except NameError as e:
     _CLIPBOARD = []
+
+# maya color index
+MAYA_OVERRIDE_COLOR = {
+    0: [48, 48, 48],
+    1: [0, 0, 0],
+    2: [13, 13, 13],
+    3: [81, 81, 81],
+    4: [84, 0, 5],
+    5: [0, 0, 30],
+    6: [0, 0, 255],
+    7: [0, 16, 2],
+    8: [5, 0, 14],
+    9: [147, 0, 147],
+    10: [65, 17, 8],
+    11: [13, 4, 3],
+    12: [81, 5, 0],
+    13: [255, 0, 0],
+    14: [0, 255, 0],
+    15: [0, 13, 81],
+    16: [1, 1, 1],
+    17: [255, 255, 0],
+    18: [32, 183, 255],
+    19: [14, 255, 93],
+    20: [255, 111, 111],
+    21: [198, 105, 49],
+    22: [255, 255, 32],
+    23: [0, 81, 23],
+    24: [91, 37, 8],
+    25: [87, 91, 8],
+    26: [35, 91, 8],
+    27: [8, 91, 28],
+    28: [8, 91, 91],
+    29: [8, 35, 91],
+    30: [41, 8, 91],
+    31: [91, 8, 37]
+}
 
 
 # =============================================================================
@@ -391,16 +431,20 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
         # Build Edit move options
         if __EDIT_MODE__.get():
+            mapped_pos = self.mapToScene(event.pos())
             add_action = QtWidgets.QAction("Add Item", None)
-            add_action.triggered.connect(self.add_picker_item)
+            add_action.triggered.connect(partial(self.add_picker_item_gui,
+                                                 mapped_pos))
             menu.addAction(add_action)
 
             add_action1 = QtWidgets.QAction("Add with selected", None)
-            add_action1.triggered.connect(self.add_picker_item_selected)
+            add_action1.triggered.connect(partial(self.add_picker_item_selected,
+                                                  mapped_pos))
             menu.addAction(add_action1)
 
             add_action2 = QtWidgets.QAction("Add item per selected", None)
-            add_action2.triggered.connect(self.add_picker_item_per_selected)
+            add_action2.triggered.connect(partial(self.add_picker_item_per_selected,
+                                                  mapped_pos))
             menu.addAction(add_action2)
 
             toggle_handles_action = QtWidgets.QAction("Toggle all handles",
@@ -495,33 +539,78 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
         return ctrl
 
-    def add_picker_item_selected(self, event=None):
+    def get_color_picker_override(self, picker, ctrl):
+        """Get the maya override color and return picker equivelant
+
+        Args:
+            picker (PickerItem): pickeritem class
+            ctrl (str): name of the control
+
+        Returns:
+            list: [R, G, B, Alpha]
+        """
+        node = ctrl
+        if cmds.nodeType(ctrl) == "transform":
+            node = cmds.listRelatives(ctrl, shapes=True)[0]
+        if not cmds.getAttr("{}.overrideEnabled".format(node)):
+            return [0, 0, 0, 255]
+        if cmds.getAttr("{}.overrideRGBColors".format(node)):
+            r_color = cmds.getAttr("{}.overrideColorR".format(node))
+            g_color = cmds.getAttr("{}.overrideColorG".format(node))
+            b_color = cmds.getAttr("{}.overrideColorB".format(node))
+            return [r_color * 255, g_color * 255, b_color * 255, 255]
+        else:
+            override_index = cmds.getAttr("{}.overrideColor".format(node))
+            color_rgb = MAYA_OVERRIDE_COLOR[override_index]
+            return [color_rgb[0], color_rgb[1], color_rgb[2], 255]
+
+    def add_picker_item_gui(self, mouse_pos=None):
+        """Create picker item at the position of the mouse
+
+        Args:
+            mouse_pos (QPosition, optional): mouse position
+        """
+        ctrl = self.add_picker_item()
+        ctrl.setPos(mouse_pos)
+
+    def add_picker_item_selected(self, mouse_pos=None):
         '''Add new PickerItem to current view
         '''
-        ctrl = self.add_picker_item(event=event)
-
+        ctrl = self.add_picker_item()
         data = {}
         selected = cmds.ls(sl=True) or []
         data["controls"] = selected
         ctrl.set_data(data)
         ctrl.set_selected_state(True)
+        if selected:
+            colors_rgb = self.get_color_picker_override(ctrl, selected[0])
+            ctrl.set_color(color=colors_rgb)
+        if mouse_pos:
+            ctrl.setPos(mouse_pos)
 
         return ctrl
 
-    def add_picker_item_per_selected(self, event=None):
+    def add_picker_item_per_selected(self, mouse_pos=None):
         '''Add new PickerItem to current view
         '''
         selection = cmds.ls(sl=True) or []
         if not selection:
             return
         created_ctrls = []
-        y_start = 0
+        if mouse_pos:
+            x_start = mouse_pos.x()
+            y_start = mouse_pos.y()
+        else:
+            x_start = 0
+            y_start = 0
         y_increment = -35
         for selected in selection:
-            ctrl = self.add_picker_item(event=event)
+            ctrl = self.add_picker_item()
             data = {}
             data["controls"] = [selected]
-            data["position"] = [0, y_start]
+            data["position"] = [x_start, y_start]
+            colors_rgb = self.get_color_picker_override(ctrl, selected)
+            ctrl.set_color(color=colors_rgb)
             y_start = y_start + y_increment
             ctrl.set_data(data)
             ctrl.set_selected_state(True)
