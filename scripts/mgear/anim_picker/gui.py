@@ -13,7 +13,7 @@ import pymel.core as pm
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 # mgear
-from mgear.core import pyqt, callbackManager
+from mgear.core import callbackManager
 from mgear.vendor.Qt import QtCore, QtWidgets, QtOpenGL, QtGui
 # from PySide2 import QtCore, QtWidgets, QtOpenGL, QtGui
 
@@ -523,22 +523,6 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         # self.fitInView(self.scene().selectionArea().boundingRect(),
         #                QtCore.Qt.KeepAspectRatio)
 
-    def add_picker_item(self, event=None):
-        '''Add new PickerItem to current view
-        '''
-        ctrl = picker_widgets.PickerItem(main_window=self.main_window,
-                                         namespace=self.namespace)
-        ctrl.setParent(self)
-        self.scene().addItem(ctrl)
-
-        # Move ctrl
-        if event:
-            ctrl.setPos(event.pos())
-        else:
-            ctrl.setPos(0, 0)
-
-        return ctrl
-
     def get_color_picker_override(self, picker, ctrl):
         """Get the maya override color and return picker equivelant
 
@@ -563,6 +547,22 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             override_index = cmds.getAttr("{}.overrideColor".format(node))
             color_rgb = MAYA_OVERRIDE_COLOR[override_index]
             return [color_rgb[0], color_rgb[1], color_rgb[2], 255]
+
+    def add_picker_item(self, event=None):
+        '''Add new PickerItem to current view
+        '''
+        ctrl = picker_widgets.PickerItem(main_window=self.main_window,
+                                         namespace=self.namespace)
+        ctrl.setParent(self)
+        self.scene().addItem(ctrl)
+
+        # Move ctrl
+        if event:
+            ctrl.setPos(event.pos())
+        else:
+            ctrl.setPos(0, 0)
+
+        return ctrl
 
     def add_picker_item_gui(self, mouse_pos=None):
         """Create picker item at the position of the mouse

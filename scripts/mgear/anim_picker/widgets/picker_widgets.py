@@ -1247,7 +1247,7 @@ class DefaultPolygon(QtWidgets.QGraphicsObject):
         self._hovered = False
 
         # Init default
-        self.color = DefaultPolygon.__DEFAULT_COLOR__
+        self.color = self.__DEFAULT_COLOR__
 
     def hoverEnterEvent(self, event=None):
         '''Lightens background color on mose over
@@ -1293,7 +1293,7 @@ class DefaultPolygon(QtWidgets.QGraphicsObject):
         '''Set polygon color
         '''
         if not color:
-            color = self.__DEFAULT_COLOR__
+            color = QtGui.QColor(0, 0, 0, 255)
         elif isinstance(color, (list, tuple)):
             color = QtGui.QColor(*color)
 
@@ -2329,7 +2329,9 @@ class PickerItem(DefaultPolygon):
         new_pickers = []
         for picker in selected_pickers:
             new_picker = picker.duplicate()
-            new_pos = QtCore.QPointF(picker.pos().x() * .9, picker.pos().y() * .9)
+            offset_x = (picker.boundingRect().width()) + 5
+            new_pos = QtCore.QPointF(picker.pos().x() + offset_x,
+                                     picker.pos().y())
             new_picker.setPos(new_pos)
             new_pickers.append(new_picker)
         self.scene().select_picker_items(new_pickers)
