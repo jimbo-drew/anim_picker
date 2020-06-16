@@ -1,8 +1,7 @@
 import mgear.menu
-from mgear import anim_picker
-from functools import partial
 import mgear
 import pymel.core as pm
+
 
 def install():
     """Install Skinning submenu
@@ -10,9 +9,20 @@ def install():
     pm.setParent(mgear.menu_id, menu=True)
     pm.menuItem(divider=True)
     commands = (
-        ("Anim Picker", partial(anim_picker.load, False, False)),
+        ("Anim Picker", str_open_picker_mode),
         ("-----", None),
-        ("Edit Anim Picker", partial(anim_picker.load, True, False))
+        ("Edit Anim Picker", str_open_edit_mode)
     )
 
     mgear.menu.install("Anim Picker", commands)
+
+
+str_open_picker_mode = """
+from mgear import anim_picker
+anim_picker.load(False, False)
+"""
+
+str_open_edit_mode = """
+from mgear import anim_picker
+anim_picker.load(True, False)
+"""
