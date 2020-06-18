@@ -1,4 +1,6 @@
 import re
+import copy
+
 from math import sin, cos, pi
 
 import maya.cmds as cmds
@@ -2346,7 +2348,7 @@ class PickerItem(DefaultPolygon):
         self.scene().addItem(new_item)
 
         # Copy data over
-        data = self.get_data()
+        data = copy.deepcopy(self.get_data())
         new_item.set_data(data)
 
         return new_item
