@@ -1969,6 +1969,7 @@ class PickerItem(DefaultPolygon):
 
         # Force call release method
         # self.mouseReleaseEvent(event)
+        return True
 
     def edit_context_menu(self, event):
         '''Context menu (right click) in edition mode

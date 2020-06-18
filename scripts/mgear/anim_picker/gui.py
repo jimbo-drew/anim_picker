@@ -358,6 +358,9 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
                 if not event.modifiers():
                     self.scene().clear_picker_selection()
                     cmds.select(cl=True)
+            elif picker_at and event.modifiers() == QtCore.Qt.AltModifier:
+                picker_at.select_associated_controls()
+                self.scene().select_picker_items([picker_at], event)
             else:
                 self.scene().select_picker_items([picker_at], event)
 
@@ -381,6 +384,11 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
                     picker_items.append(item)
                 if __EDIT_MODE__.get():
                     self.scene().select_picker_items(picker_items)
+                    if event.modifiers() == QtCore.Qt.AltModifier:
+                        ctrls = []
+                        for x in picker_items:
+                            ctrls.extend(x.get_controls())
+                        cmds.select(cmds.ls(ctrls))
                 else:
                     picker_widgets.select_picker_controls(picker_items, event)
 
