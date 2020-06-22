@@ -12,6 +12,12 @@ from mgear.anim_picker import picker_node
 from mgear.anim_picker.widgets import basic
 from mgear.anim_picker.handlers import file_handlers
 
+# constants -------------------------------------------------------------------
+try:
+    _LAST_USED_DIRECTORY
+except NameError as e:
+    _LAST_USED_DIRECTORY = None
+
 
 class OverlayWidget(QtWidgets.QWidget):
     '''
@@ -162,15 +168,18 @@ class SaveOverlayWidget(OverlayWidget):
         file_path = self.select_file_dialog()
         if not file_path:
             return
+        global _LAST_USED_DIRECTORY
+        _LAST_USED_DIRECTORY = os.path.dirname(file_path)
         self.file_path_le.setText(file_path)
 
     def select_file_dialog(self):
         '''Get file dialog window starting in default folder
         '''
         picker_msg = "Picker Datas (*.pkr)"
+        path_module = _LAST_USED_DIRECTORY or basic.get_module_path()
         file_path = QtWidgets.QFileDialog.getSaveFileName(self,
                                                           "Choose file",
-                                                          basic.get_module_path(),
+                                                          path_module,
                                                           picker_msg)
 
         # Filter return result (based on qt version)
@@ -303,6 +312,8 @@ class LoadOverlayWidget(OverlayWidget):
         file_path = self.select_file_dialog()
         if not file_path:
             return
+        global _LAST_USED_DIRECTORY
+        _LAST_USED_DIRECTORY = os.path.dirname(file_path)
         self.file_path_le.setText(file_path)
 
     def add_load_options(self):
@@ -361,7 +372,7 @@ class LoadOverlayWidget(OverlayWidget):
         '''Get file dialog window starting in default folder
         '''
         picker_msg = "Picker Datas (*.pkr)"
-        path_module = basic.get_module_path()
+        path_module = _LAST_USED_DIRECTORY or basic.get_module_path()
         file_path = QtWidgets.QFileDialog.getOpenFileName(self,
                                                           "Choose file",
                                                           path_module,
