@@ -14,6 +14,18 @@ from mgear.anim_picker.handlers import (__EDIT_MODE__,
                                         python_handlers,
                                         maya_handlers)
 
+# constants -------------------------------------------------------------------
+SCRIPT_DOC_HEADER = \
+"""# Variable reference for custom script execution on pickers.
+# Use the following variables in your code to access related data:
+# __CONTROLS__ for picker item associated controls (will return sets and not content).
+# __FLATCONTROLS__ for associated controls and control set content.
+# __NAMESPACE__ for current picker namespace
+# __INIT__ use 'if not' statement to avoid code execution on creation.
+# __SELF__ to get access to the PickerItem() instace. (Change color, size, etc)
+
+"""
+
 
 # =============================================================================
 # general functions
@@ -65,21 +77,6 @@ class CustomScriptEditDialog(QtWidgets.QDialog):
         self.apply = False
         self.setup()
 
-    @staticmethod
-    def get_default_script():
-        '''Custom script default content
-        '''
-        text = "# Custom anim_picker python script window\n"
-        text += "# Use the following variables in your code to access \
-        related data:\n"
-        text += "# __CONTROLS__ for picker item associated controls \
-        (will return sets and not content).\n"
-        text += "# __FLATCONTROLS__ for associated controls and control \
-        set content.\n"
-        text += "# __NAMESPACE__ for current picker namespace\n"
-        text += '\n'
-        return text
-
     def setup(self):
         '''Build/Setup the dialog window
         '''
@@ -91,10 +88,13 @@ class CustomScriptEditDialog(QtWidgets.QDialog):
         # Add cmd txt field
         self.cmd_widget = QtWidgets.QTextEdit()
         if self.cmd:
-            self.cmd_widget.setText(self.cmd)
+            text = self.cmd
         else:
-            default_script = self.get_default_script()
-            self.cmd_widget.setText(default_script)
+            text = SCRIPT_DOC_HEADER
+        self.cmd_widget.setText(text)
+        newCursor = self.cmd_widget.textCursor()
+        newCursor.movePosition(QtGui.QTextCursor.End)
+        self.cmd_widget.setTextCursor(newCursor)
         self.main_layout.addWidget(self.cmd_widget)
 
         # Add buttons
