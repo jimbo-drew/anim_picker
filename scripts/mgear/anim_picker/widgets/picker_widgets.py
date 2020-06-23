@@ -361,6 +361,7 @@ class ItemOptionsWindow(QtWidgets.QMainWindow):
         # Add content
         self.add_main_options()
         self.add_position_options()
+        self.add_rotation_options()
         self.add_color_options()
         self.add_scale_options()
         self.add_text_options()
@@ -513,6 +514,48 @@ class ItemOptionsWindow(QtWidgets.QMainWindow):
         layout.addLayout(spin_layout)
 
         # Add to main layout
+        self.left_layout.addWidget(group_box)
+
+    def add_rotation_options(self):
+        '''Add rotation group box options
+        '''
+        # Create group box
+        group_box = QtWidgets.QGroupBox()
+        group_box.setTitle('Rotation')
+
+        # Add layout
+        layout = QtWidgets.QVBoxLayout(group_box)
+
+        # Add alpha spin box
+        spin_layout = QtWidgets.QHBoxLayout()
+        layout.addLayout(spin_layout)
+
+        label = QtWidgets.QLabel()
+        label.setText('Angle')
+        spin_layout.addWidget(label)
+
+        self.rotate_sb = QtWidgets.QDoubleSpinBox()
+        self.rotate_sb.setValue(15)
+        self.rotate_sb.setSingleStep(5)
+        spin_layout.addWidget(self.rotate_sb)
+
+        # Add rotate buttons
+        btn_layout = QtWidgets.QHBoxLayout()
+        layout.addLayout(btn_layout)
+
+        btn = basic.CallbackButton(callback=self.rotate_event, rotMinus=True)
+        btn.setText('Rot-')
+        btn_layout.addWidget(btn)
+
+        btn = basic.CallbackButton(callback=self.reset_rotate_event)
+        btn.setText('Reset')
+        btn_layout.addWidget(btn)
+
+        btn = basic.CallbackButton(callback=self.rotate_event, rotPlus=True)
+        btn.setText('Rot+')
+        btn_layout.addWidget(btn)
+
+        # Add to main left layout
         self.left_layout.addWidget(group_box)
 
     def _set_color_button(self, color):
@@ -853,6 +896,25 @@ class ItemOptionsWindow(QtWidgets.QMainWindow):
 
         # Update color
         self.picker_item.set_color(color)
+
+    def rotate_event(self, rotMinus=None, rotPlus=None):
+        '''Will rotate polygon based on angle value from spin box
+        '''
+        # Get rotate angle value
+        rotate_angle = self.rotate_sb.value()
+
+        # Build kwargs
+        kwargs = {'angle':0.0}
+        if rotMinus:
+            kwargs['angle'] = rotate_angle
+        if rotPlus:
+            kwargs['angle'] = rotate_angle * -1
+
+        # Apply rotation
+        self.picker_item.rotate_shape(**kwargs)
+
+    def reset_rotate_event(self):
+        self.picker_item.reset_rotation()
 
     def scale_event(self, x=False, y=False):
         '''Will scale polygon on specified axis based on scale factor
@@ -2309,6 +2371,20 @@ class PickerItem(DefaultPolygon):
         '''
         self.setX(-1 * self.pos().x())
 
+    def mirror_rotation(self, angle=None):
+        '''Mirror picker rotation angle
+        '''
+        if not angle:
+            angle = self.rotation()
+
+        if angle > 360:
+            angle = angle - 360
+
+        mirror_angle = abs(angle - 360)
+
+        self.setRotation(mirror_angle)
+        self.update()
+
     def mirror_shape(self):
         '''Will mirror polygon handles position on X axis
         '''
@@ -2377,6 +2453,10 @@ class PickerItem(DefaultPolygon):
         new_item.mirror_color()
         new_item.mirror_position()
         new_item.mirror_shape()
+
+        angle = self.rotation()
+        new_item.mirror_rotation(angle)
+
         if self.get_controls():
             new_item.search_and_replace_controls(search=search,
                                                  replace=replace)
@@ -2438,6 +2518,21 @@ class PickerItem(DefaultPolygon):
             factor = QtGui.QTransform().scale(x, y)
             self.setPos(self.pos() * factor)
 
+        self.update()
+
+    def rotate_shape(self, angle):
+        '''Rotate shape based on item center
+        '''
+        angle = self.rotation() + angle
+        if angle > 360: angle = angle - 360
+
+        self.setRotation(angle)
+        self.update()
+
+    def reset_rotation(self):
+        '''Reset rotation
+        '''
+        self.setRotation(0)
         self.update()
 
     # =========================================================================
@@ -2620,6 +2715,11 @@ class PickerItem(DefaultPolygon):
             position = data.get("position", [0, 0])
             self.setPos(*position)
 
+        # Set rotation
+        if "rotation" in data:
+            rotation = data.get("rotation")
+            self.setRotation(rotation)
+
         # Set handles
         if "handles" in data:
             self.set_handles(data["handles"])
@@ -2657,6 +2757,9 @@ class PickerItem(DefaultPolygon):
 
         # Add position
         data["position"] = [self.x(), self.y()]
+
+        # Add rotation
+        data["rotation"] = self.rotation()
 
         # Add handles datas
         handles_data = []
@@ -2713,6 +2816,8 @@ class DataCopyDialog(QtWidgets.QDialog):
     __STATES__ = []
     __DO_POS__ = State(False, 'position')
     __STATES__.append(__DO_POS__)
+    __DO_ROT__ = State(False, 'rotation')
+    __STATES__.append(__DO_ROT__)
     __DO_COLOR__ = State(True, 'color')
     __STATES__.append(__DO_COLOR__)
     __DO_ACTION_MODE__ = State(True, 'action_mode')
