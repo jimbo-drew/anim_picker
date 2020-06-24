@@ -1325,7 +1325,8 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
 
         # Populate
         for data_node in nodes:
-            text = data_node.get_namespace() or data_node.name
+            # text = data_node.get_namespace() or data_node.name
+            text = data_node.name
             self.char_selector_cb.addItem(text)
 
         # Set elements active status
