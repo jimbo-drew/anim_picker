@@ -1351,7 +1351,7 @@ class DefaultPolygon(QtWidgets.QGraphicsObject):
     def get_color(self):
         '''Get polygon color
         '''
-        return self.color
+        return QtGui.QColor(self.color)
 
     def set_color(self, color=None):
         '''Set polygon color
