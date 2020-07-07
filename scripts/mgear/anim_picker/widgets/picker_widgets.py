@@ -1,5 +1,6 @@
 import re
 import copy
+import uuid
 
 from math import sin, cos, pi
 
@@ -315,7 +316,16 @@ class ItemOptionsWindow(QtWidgets.QMainWindow):
     # constructor
     def __init__(self, parent=None, picker_item=None):
         QtWidgets.QMainWindow.__init__(self, parent=parent)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
         self.picker_item = picker_item
+
+        # undo ----------------------------------------------------------------
+        self.main_view = self.picker_item.scene().parent()
+        self.tmp_picker_pos_info = {}
+        self.tmp_picker_pos_info[picker_item.uuid] = [picker_item.x(),
+                                                      picker_item.y(),
+                                                      picker_item.rotation()]
+        # undo ----------------------------------------------------------------
 
         # Define size
         self.default_width = 270
@@ -389,6 +399,24 @@ class ItemOptionsWindow(QtWidgets.QMainWindow):
                 self.handles_window.close()
             except Exception:
                 pass
+
+        # undo ----------------------------------------------------------------
+        current_position = [self.picker_item.x(),
+                            self.picker_item.y(),
+                            self.picker_item.rotation()]
+
+        orig_position = self.tmp_picker_pos_info.get(self.picker_item.uuid,
+                                                     None)
+        if orig_position is not None and orig_position != current_position:
+            self.tmp_picker_pos_info[self.picker_item.uuid].extend(current_position)
+            if self.main_view.undo_move_order_index in [-1]:
+                self.main_view.undo_move_order.append(copy.deepcopy(self.tmp_picker_pos_info))
+            else:
+                self.main_view.undo_move_order = self.undo_move_order[:self.main_view.undo_move_order_index]
+                self.main_view.undo_move_order.append(copy.deepcopy(self.tmp_picker_pos_info))
+            self.undo_move_order_index = -1
+            self.tmp_picker_pos_info = {}
+        # undo ----------------------------------------------------------------
 
         QtWidgets.QMainWindow.closeEvent(self, *args, **kwargs)
 
@@ -1798,6 +1826,9 @@ class PickerItem(DefaultPolygon):
         self.custom_action = False
         self.custom_action_script = None
 
+        # uuid & undo
+        self.uuid = uuid.uuid4()
+
     def shape(self):
         path = QtGui.QPainterPath()
 
@@ -1925,14 +1956,12 @@ class PickerItem(DefaultPolygon):
         if __EDIT_MODE__.get():
             text = '\n'.join(self.get_controls())
             self.setToolTip(text)
-        # DefaultPolygon.hoverEnterEvent(self, event)
         super(PickerItem, self).hoverEnterEvent(event)
 
     def mouseMoveEvent_offset(self, event):
         self.setPos(event.scenePos() + self.cursor_delta)
 
     def mouseMoveEvent(self, event):
-        # print event.pos()
         gfx_event = event
         if event.buttons() == QtCore.Qt.LeftButton and __EDIT_MODE__.get():
             if self.currently_selected:
@@ -1972,8 +2001,10 @@ class PickerItem(DefaultPolygon):
             maya_window.setFocus()
 
     # def mouseReleaseEvent(self, event):
-    #     if event.buttons() == QtCore.Qt.LeftButton:
-    #         DefaultPolygon.mouseReleaseEvent(self, event)
+    #     if __EDIT_MODE__.get():s
+    #         print(22222)
+    #         print(self.parent().drag_active)
+    #     super(PickerItem, self).mouseReleaseEvent(event)
 
     def mouse_press_select_event(self, event, modifiers=None):
         '''
@@ -2159,6 +2190,7 @@ class PickerItem(DefaultPolygon):
         # OFFSET
         offseted_pos = event.pos() + QtCore.QPoint(5, 0)
         menu.exec_(offseted_pos)
+        return True
 
     def default_context_menu(self, event):
         '''Context menu (right click) out of edition mode (animation)

@@ -5,6 +5,7 @@
 
 # python
 import os
+import copy
 from functools import partial
 
 # dcc
@@ -193,6 +194,20 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
         else:
             return None
 
+    def get_picker_by_uuid(self, picker_uuid):
+        """pickers have UUID's for hashing in dictionaries. search via uuid
+
+        Args:
+            picker_uuid (str): uuid
+
+        Returns:
+            PickerIteem: instance of matching picker
+        """
+        for picker in self.get_picker_items():
+            if picker.uuid == picker_uuid:
+                return picker
+        return None
+
     def get_selected_items(self):
         return [item for item in self.get_picker_items()
                 if item.polygon.selected]
@@ -288,6 +303,10 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         self.background_image = None
         self.background_image_path = None
 
+        # # undo list ---------------------------------------------------------
+        self.undo_move_order = []
+        self.undo_move_order_index = -1
+
     def get_center_pos(self):
         return self.mapToScene(QtCore.QPoint(self.width() / 2,
                                              self.height() / 2))
@@ -295,6 +314,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
     def mousePressEvent(self, event):
         self.modified_select = False
         self.item_selected = False
+        self.__move_prompt = False
         QtWidgets.QGraphicsView.mousePressEvent(self, event)
         if event.buttons() == QtCore.Qt.LeftButton:
             self.scene_mouse_origin = self.mapToScene(event.pos())
@@ -303,20 +323,32 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             scene_pos = self.mapToScene(event.pos())
             # Clear selection if no picker item below mouse
             picker_at = self.scene().picker_at(scene_pos, transform) or []
-            if not picker_at:
+            if picker_at:
+                if __EDIT_MODE__.get():
+                    self.item_selected = True
+                    # undo ---------------------------------------------------
+                    self.__move_prompt = False
+                    # open undo chunk
+                    self.tmp_picker_pos_info = {}
+                    pickers = self.scene().get_selected_items()
+                    if picker_at not in pickers:
+                        pickers.append(picker_at)
+                    for picker in pickers:
+                        self.tmp_picker_pos_info[picker.uuid] = [picker.x(),
+                                                                 picker.y(),
+                                                                 picker.rotation()]
+                    # undo ---------------------------------------------------
+                    if event.modifiers():
+                        # this allows for shift selecting in edit
+                        self.modified_select = False
+                else:
+                    self.modified_select = True
+                    picker_widgets.select_picker_controls([picker_at], event)
+            else:
                 self.modified_select = False
                 if not event.modifiers():
                     self.scene().clear_picker_selection()
                     cmds.select(cl=True)
-            else:
-                if not __EDIT_MODE__.get():
-                    self.modified_select = True
-                    picker_widgets.select_picker_controls([picker_at], event)
-                else:
-                    self.item_selected = True
-                    if event.modifiers():
-                        # this allows for shift selecting in edit
-                        self.modified_select = False
 
         elif event.buttons() == QtCore.Qt.MidButton:
             self.setDragMode(self.ScrollHandDrag)
@@ -328,6 +360,13 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
         if event.buttons() == QtCore.Qt.LeftButton and not self.item_selected:
             self.drag_active = True
+
+        # undo ---------------------------------------------------------------
+        if (__EDIT_MODE__.get() and event.buttons() == QtCore.Qt.LeftButton
+                and self.item_selected):
+            # confirm undo move chunck, a picker has been moved
+            self.__move_prompt = True
+        # undo ----------------------------------------------------------------
 
         if self.pan_active:
             current_center = self.get_center_pos()
@@ -364,9 +403,27 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             else:
                 self.scene().select_picker_items([picker_at], event)
 
+        # add moved pickers to undo_move_order list ---------------------------
+        if not self.drag_active and self.__move_prompt:
+            for picker_uuid in self.tmp_picker_pos_info.keys():
+                picker = self.scene().get_picker_by_uuid(picker_uuid)
+                if picker is None:
+                    continue
+                self.tmp_picker_pos_info[picker_uuid].extend([picker.x(),
+                                                             picker.y(),
+                                                             picker.rotation()])
+            if self.undo_move_order_index in [-1]:
+                self.undo_move_order.append(copy.deepcopy(self.tmp_picker_pos_info))
+            else:
+                self.undo_move_order = self.undo_move_order[:self.undo_move_order_index]
+                self.undo_move_order.append(copy.deepcopy(self.tmp_picker_pos_info))
+            self.undo_move_order_index = -1
+        self.__move_prompt = None
+        self.tmp_picker_pos_info = {}
+        # undo ----------------------------------------------------------------
+
         # Area selection
         if self.drag_active and event.button() == QtCore.Qt.LeftButton:
-            # self.drag_active = False
             scene_drag_end = self.mapToScene(event.pos())
 
             sel_area = QtCore.QRectF(self.scene_mouse_origin, scene_drag_end)
@@ -420,6 +477,62 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
         # Apply zoom
         self.scale(factor, factor)
+
+    # undo --------------------------------------------------------------------
+    def undo_move(self):
+        """go through (reversed) the undo_move_order list and move pickers
+        back to their previously stored location
+        """
+        undo_len = len(self.undo_move_order)
+        if undo_len == 0:
+            return
+
+        if self.undo_move_order_index == -1:
+            self.undo_move_order_index = undo_len
+        elif self.undo_move_order_index == 0:
+            return
+        if self.undo_move_order_index > 0:
+            self.undo_move_order_index = self.undo_move_order_index - 1
+        for picker_uuid, undo_pos in self.undo_move_order[self.undo_move_order_index].iteritems():
+            picker = self.scene().get_picker_by_uuid(picker_uuid)
+            if not picker:
+                continue
+            picker.setPos(undo_pos[0], undo_pos[1])
+            picker.setRotation(undo_pos[2])
+
+    def redo_move(self):
+        """go through the undo_move_order restoring picker locations
+        """
+        undo_len = len(self.undo_move_order)
+        if undo_len == 0:
+            return
+
+        if self.undo_move_order_index == -1:
+            return
+        if self.undo_move_order_index < undo_len:
+            for picker_uuid, undo_pos in self.undo_move_order[self.undo_move_order_index].iteritems():
+                picker = self.scene().get_picker_by_uuid(picker_uuid)
+                if not picker:
+                    continue
+                picker.setPos(undo_pos[3], undo_pos[4])
+                picker.setRotation(undo_pos[5])
+            self.undo_move_order_index = self.undo_move_order_index + 1
+        else:
+            self.undo_move_order_index = -1
+
+    def keyPressEvent(self, event):
+        """keyboard press event override for custom shortcuts
+
+        Args:
+            event (QtCore.QEvent): keyboard event
+        """
+        modifiers = event.modifiers()
+        if modifiers == QtCore.Qt.ControlModifier and event.key() == QtCore.Qt.Key_Z:
+            self.undo_move()
+        elif modifiers == QtCore.Qt.ControlModifier and event.key() == QtCore.Qt.Key_Y:
+            self.redo_move()
+
+    # undo --------------------------------------------------------------------
 
     def contextMenuEvent(self, event, mapped_pos=None):
         '''Right click menu options
@@ -631,7 +744,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         """
         global _CLIPBOARD
         _CLIPBOARD = []
-        selected_pickers = self.scene().get_selected_items()
+        selected_pickers = self.scene().scene().get_selected_items()
         for picker in selected_pickers:
             _CLIPBOARD.append(picker.get_data())
 
