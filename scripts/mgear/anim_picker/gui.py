@@ -744,7 +744,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         """
         global _CLIPBOARD
         _CLIPBOARD = []
-        selected_pickers = self.scene().scene().get_selected_items()
+        selected_pickers = self.scene().get_selected_items()
         for picker in selected_pickers:
             _CLIPBOARD.append(picker.get_data())
 
