@@ -1186,6 +1186,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         """event filter for general override
         current use
         -Auto opacityfilter
+        -hide the GraphicsView for compatibility with MacOs
 
         Args:
             QObject (QObject): the object getting the event
@@ -1202,8 +1203,17 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
             if self.auto_opacity_btn.isChecked():
                 self.change_opacity()
                 return True
-        else:
-            return False
+
+        # hide main tab widget for os compatibility
+        if QObject in getattr(self, "overlays", []):
+            if event.type() == QtCore.QEvent.Type.Show:
+                self.tab_widget.hide()
+                return True
+            elif event.type() == QtCore.QEvent.Type.Hide:
+                self.tab_widget.show()
+                return True
+
+        return False
 
     def change_opacity(self):
         """Change the  windows opacity
@@ -1315,12 +1325,24 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         view = GraphicViewWidget(main_window=self)
         self.tab_widget.addTab(view, name)
 
+        # ensure the tab retains its size when hidden
+        sp_retain = self.tab_widget.sizePolicy()
+        sp_retain.setRetainSizeWhenHidden(True)
+        self.tab_widget.setSizePolicy(sp_retain)
+
     def add_overlays(self):
         '''Add transparent overlay widgets
         '''
         self.about_widget = overlay_widgets.AboutOverlayWidget(self)
         self.load_widget = overlay_widgets.LoadOverlayWidget(self)
         self.save_widget = overlay_widgets.SaveOverlayWidget(self)
+        self.overlays = [self.about_widget,
+                         self.load_widget,
+                         self.save_widget]
+
+        # specificaly hiding and showing the main layer for OS compatibility
+        for layer in self.overlays:
+            layer.installEventFilter(self)
 
     def get_picker_items(self):
         '''Return picker items for current active tab
@@ -1697,7 +1719,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
                             break
         # Update controls for active tab
         for item in self.get_picker_items():
-             item.run_selection_check()
+            item.run_selection_check()
 
 
 # # =============================================================================
