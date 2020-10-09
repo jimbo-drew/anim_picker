@@ -5,7 +5,7 @@ import os
 import maya.cmds as cmds
 
 # mgear
-from mgear.vendor.Qt import QtCore, QtWidgets, QtOpenGL, QtGui
+from mgear.vendor.Qt import QtCore, QtWidgets, QtGui
 
 # module
 from mgear.anim_picker import picker_node
