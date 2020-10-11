@@ -123,7 +123,8 @@ def show_space_chage_list(namespace,
             pyqt.position_window(ql)
             ql.exec_()
     except Exception as e:
-        print("Could not build space change list for ctl {}".format(ctl))
+        print("Could not build space change list for ctl {}. Rig components renamed?".format(ctl))
+        print("Error: " + str(e))
         return
 
 
