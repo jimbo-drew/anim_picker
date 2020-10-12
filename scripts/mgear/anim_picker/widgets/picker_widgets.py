@@ -1534,8 +1534,7 @@ class PointHandle(DefaultPolygon):
     def scale_pos(self, x=1.0, y=1.0):
         '''Scale handle local position
         '''
-        factor = QtGui.QTransform().scale(x, y)
-        self.setPos(self.pos() * factor)
+        self.setPos(self.pos().x() * x, self.pos().y() * y)
         self.update()
 
     def enable_index_draw(self, status=False):
