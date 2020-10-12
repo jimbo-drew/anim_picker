@@ -2546,8 +2546,7 @@ class PickerItem(DefaultPolygon):
 
         # Scale position
         if world:
-            factor = QtGui.QTransform().scale(x, y)
-            self.setPos(self.pos() * factor)
+            self.setPos(self.pos().x() * x, self.pos().y() * y)
 
         self.update()
 
