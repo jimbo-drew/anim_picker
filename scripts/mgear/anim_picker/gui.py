@@ -14,7 +14,7 @@ import pymel.core as pm
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 # mgear
-from mgear.core import callbackManager
+from mgear.core import callbackManager, pyqt
 from mgear.vendor.Qt import QtCore, QtWidgets, QtOpenGL, QtGui
 # from PySide2 import QtCore, QtWidgets, QtOpenGL, QtGui
 
@@ -28,11 +28,10 @@ from handlers import __EDIT_MODE__
 from handlers import __SELECTION__
 
 # debugging
-reload(basic)
-reload(picker_node)
-reload(picker_widgets)
-reload(overlay_widgets)
-
+# reload(basic)
+# reload(picker_node)
+# reload(picker_widgets)
+# reload(overlay_widgets)
 
 # constants -------------------------------------------------------------------
 try:
@@ -1124,8 +1123,8 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
 
         # Window size
         # (default size to provide a 450/700 for tab area and proper img size)
-        self.default_width = 476
-        self.default_height = 837
+        self.default_width = pyqt.dpi_scale(476)
+        self.default_height = pyqt.dpi_scale(837)
 
         # Default vars
         self.childs = []
@@ -1236,7 +1235,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # Create group box
         box = QtWidgets.QGroupBox()
         box.setTitle("Character Selector")
-        box.setFixedHeight(80)
+        box.setFixedHeight(pyqt.dpi_scale(80))
 
         layout.addWidget(box)
 
@@ -1722,9 +1721,9 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
             item.run_selection_check()
 
 
-# # =============================================================================
-# # Load user interface function
-# # =============================================================================
+# =============================================================================
+# Load user interface function
+# =============================================================================
 def load(edit=False, dockable=True):
     """To launch the ui and not get the same instance
 
