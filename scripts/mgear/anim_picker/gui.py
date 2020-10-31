@@ -33,36 +33,6 @@ from handlers import __SELECTION__
 # reload(picker_widgets)
 # reload(overlay_widgets)
 
-
-# dpi beta test ---------------------------------------------------------------
-os.environ["_LOGICAL_DPI"] = str(pyqt.maya_main_window().logicalDpiX())
-
-
-def get_logicaldpi():
-    """attempting to "cache" the query to the maya main window for speed
-
-    Returns:
-        int: dpi of the monitor
-    """
-    return int(os.environ.get("_LOGICAL_DPI")) or 96
-
-
-def dpi_scale(value, default=96, min_=1, max_=2):
-    """Scale the provided value by the scale that maya is using
-    which is derived from the 'average' dpi of 96 from windows, linux, osx.
-
-    Args:
-        value (int, float): value to scale
-        default (int, optional): assumed default from various platforms
-        min_ (int, optional): if you do not want the value under 96 dpi
-        max_ (int, optional): if you do not want a value higher than 200% scale
-
-    Returns:
-        # int, float: scaled value
-    """
-    return value * max(min_, min(get_logicaldpi() / float(default), max_))
-
-
 # constants -------------------------------------------------------------------
 try:
     _CLIPBOARD
@@ -1153,8 +1123,8 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
 
         # Window size
         # (default size to provide a 450/700 for tab area and proper img size)
-        self.default_width = dpi_scale(476)
-        self.default_height = dpi_scale(837)
+        self.default_width = pyqt.dpi_scale(476)
+        self.default_height = pyqt.dpi_scale(837)
 
         # Default vars
         self.childs = []
@@ -1265,7 +1235,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # Create group box
         box = QtWidgets.QGroupBox()
         box.setTitle("Character Selector")
-        box.setFixedHeight(dpi_scale(80))
+        box.setFixedHeight(pyqt.dpi_scale(80))
 
         layout.addWidget(box)
 
