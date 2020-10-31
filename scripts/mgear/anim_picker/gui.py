@@ -291,6 +291,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         self.scene_mouse_origin = QtCore.QPointF()
         self.drag_active = False
         self.pan_active = False
+        self.zoom_active = False
 
         # Disable scroll bars
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -354,6 +355,19 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             self.pan_active = True
             self.scene_mouse_origin = self.mapToScene(event.pos())
 
+        # zoom support added for the mouse, for those pen/tablet users
+        elif event.buttons() == QtCore.Qt.RightButton and \
+                event.modifiers() == QtCore.Qt.AltModifier:
+            self.zoom_active = True
+            self.setDragMode(self.ScrollHandDrag)
+            self.scene_mouse_origin = self.mapToGlobal(event.pos())
+            cursor_pos = QtGui.QVector2D(self.mapToGlobal(self.scene_mouse_origin))
+            screen = QtWidgets.QApplication.instance().primaryScreen()
+            rect = screen.availableGeometry()
+            self.top_left_pos = QtGui.QVector2D(rect.topLeft())
+            self.zoom_delta = self.top_left_pos.distanceToPoint(cursor_pos)
+            self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorViewCenter)
+
     def mouseMoveEvent(self, event):
         result = QtWidgets.QGraphicsView.mouseMoveEvent(self, event)
 
@@ -374,6 +388,18 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             new_center = current_center - (scene_paning -
                                            self.scene_mouse_origin)
             self.centerOn(new_center)
+
+        if self.zoom_active:
+            cursor_pos = QtGui.QVector2D(self.mapToGlobal(event.pos()))
+            current_delta = self.top_left_pos.distanceToPoint(cursor_pos)
+
+            factor = 1.05
+            if current_delta < self.zoom_delta:
+                factor = 0.95
+
+            # Apply zoom
+            self.scale(factor, factor)
+            self.zoom_delta = current_delta
 
         return result
 
@@ -409,8 +435,8 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
                 if picker is None:
                     continue
                 self.tmp_picker_pos_info[picker_uuid].extend([picker.x(),
-                                                             picker.y(),
-                                                             picker.rotation()])
+                                                              picker.y(),
+                                                              picker.rotation()])
             if self.undo_move_order_index in [-1]:
                 self.undo_move_order.append(copy.deepcopy(self.tmp_picker_pos_info))
             else:
@@ -449,7 +475,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
                     picker_widgets.select_picker_controls(picker_items, event)
 
         # Middle mouse view panning
-        if (self.pan_active and event.button() == QtCore.Qt.MidButton):
+        if self.pan_active and event.button() == QtCore.Qt.MidButton:
             current_center = self.get_center_pos()
             scene_drag_end = self.mapToScene(event.pos())
 
@@ -458,6 +484,12 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             self.centerOn(new_center)
             self.pan_active = False
             self.setDragMode(self.RubberBandDrag)
+
+        # zoom support added for the mouse, for those pen/tablet users
+        if self.zoom_active and event.button() == QtCore.Qt.RightButton:
+            self.zoom_active = False
+            self.setDragMode(self.RubberBandDrag)
+
         self.drag_active = False
         return result
 
@@ -536,6 +568,9 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
     def contextMenuEvent(self, event, mapped_pos=None):
         '''Right click menu options
         '''
+        if event.modifiers() == QtCore.Qt.AltModifier:
+            # alt may indicate zooming enabled so no menu
+            return
         # Item area
         picker_item = [item for item in self.get_picker_items()
                        if item._hovered]
