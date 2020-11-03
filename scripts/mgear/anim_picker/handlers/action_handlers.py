@@ -62,9 +62,7 @@ class SpaceChangeList(QtWidgets.QMenu):
             self.listWidget.setCurrentRow(
                 anim_utils.getComboIndex_with_namespace(
                     self.namespace, self.ui_host, self.combo_attr))
-            # model = self.namespace + ":" + self.ui_host
-            # print self.ctl
-            # print model
+
             anim_utils.ParentSpaceTransfer.showUI(self.listWidget,
                                                   self.ui_host,
                                                   stripNamespace(self.ui_host),
@@ -114,11 +112,11 @@ def show_space_chage_list(namespace,
             # create a new instance
 
             ql = SpaceChangeList(namespace,
-                                ui_host,
-                                combo_attr,
-                                ctl,
-                                self_widget,
-                                maya_window)
+                                 ui_host,
+                                 combo_attr,
+                                 ctl,
+                                 self_widget,
+                                 maya_window)
 
             pyqt.position_window(ql)
             ql.exec_()

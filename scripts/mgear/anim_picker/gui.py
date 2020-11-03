@@ -292,6 +292,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         self.drag_active = False
         self.pan_active = False
         self.zoom_active = False
+        self.auto_frame_active = True
 
         # Disable scroll bars
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -645,11 +646,15 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         reset_view_action = QtWidgets.QAction("Reset view", None)
         reset_view_action.triggered.connect(self.fit_scene_content)
         menu.addAction(reset_view_action)
-        frame_selection_view_action = QtWidgets.QAction(
-            "Frame Selection", None)
-        frame_selection_view_action.triggered.connect(
-            self.fit_selection_content)
+        frame_selection_view_action = QtWidgets.QAction("Frame Selection", None)
+        frame_selection_view_action.triggered.connect(self.fit_selection_content)
         menu.addAction(frame_selection_view_action)
+
+        auto_frame_selection_view_action = QtWidgets.QAction("Auto Frame view", None)
+        auto_frame_selection_view_action.setCheckable(True)
+        auto_frame_selection_view_action.setChecked(self.auto_frame_active)
+        auto_frame_selection_view_action.triggered.connect(self.set_auto_frame_view)
+        menu.addAction(auto_frame_selection_view_action)
 
         # Open context menu under mouse
         menu.exec_(event.globalPos())
@@ -658,7 +663,8 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         '''Overload to force scale scene content to fit view
         '''
         # Fit scene content to view
-        self.fit_scene_content()
+        if self.auto_frame_active:
+            self.fit_scene_content()
 
         # Run default resizeEvent
         return QtWidgets.QGraphicsView.resizeEvent(self, *args, **kwargs)
@@ -669,14 +675,20 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         scene_rect = self.scene().get_bounding_rect(margin=8)
         self.fitInView(scene_rect, QtCore.Qt.KeepAspectRatio)
 
+    def set_auto_frame_view(self):
+        '''Enable auto fit when a resize event happens
+        '''
+        # Fit scene content to view
+        if not self.auto_frame_active:
+            self.fit_scene_content()
+        self.auto_frame_active = not self.auto_frame_active
+
     def fit_selection_content(self):
         '''Will fit the selected item to view, by scaling it
         '''
         scene_rect = self.scene().get_bounding_rect(margin=8, selection=True)
         if scene_rect:
             self.fitInView(scene_rect, QtCore.Qt.KeepAspectRatio)
-        # self.fitInView(self.scene().selectionArea().boundingRect(),
-        #                QtCore.Qt.KeepAspectRatio)
 
     def get_color_picker_override(self, picker, ctrl):
         """Get the maya override color and return picker equivelant
@@ -834,7 +846,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
         # Check that path exists
         if not (path and os.path.exists(path)):
-            print "# background image not found: '{}'".format(path)
+            print("# background image not found: '{}'".format(path))
             return
 
         self.background_image_path = path
