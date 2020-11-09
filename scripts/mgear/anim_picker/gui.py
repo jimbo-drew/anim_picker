@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
 # Copyright (c) 2018 Guillaume Barlier
 # This file is part of "anim_picker" and covered by MIT,
 # read LICENSE.md and COPYING.md for details.
@@ -24,8 +27,8 @@ from mgear.anim_picker.widgets import basic
 from mgear.anim_picker.widgets import picker_widgets
 from mgear.anim_picker.widgets import overlay_widgets
 
-from handlers import __EDIT_MODE__
-from handlers import __SELECTION__
+from .handlers import __EDIT_MODE__
+from .handlers import __SELECTION__
 
 # debugging
 # reload(basic)

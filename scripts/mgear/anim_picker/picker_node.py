@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 # Copyright (c) 2018 Guillaume Barlier
 # This file is part of "anim_picker" and covered by MIT,
 # read LICENSE.md and COPYING.md for details.
@@ -11,8 +14,8 @@ import pymel.core as pm
 
 # anim picker
 import mgear.anim_picker
-from handlers import maya_handlers
-from handlers import file_handlers
+from .handlers import maya_handlers
+from .handlers import file_handlers
 
 
 def get_nodes():

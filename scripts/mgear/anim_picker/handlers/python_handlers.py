@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 # Copyright (c) 2018 Guillaume Barlier
 # This file is part of "anim_picker" and covered by MIT,
 # read LICENSE.md and COPYING.md for details.
@@ -11,6 +14,6 @@ def safe_code_exec(cmd, env=None):
     if env is None:
         env = {}
     try:
-        exec cmd in env
+        exec(cmd, env)
     except Exception as e:
         pprint.pprint(e)

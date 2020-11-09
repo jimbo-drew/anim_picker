@@ -1,10 +1,13 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 # Copyright (c) 2018 Guillaume Barlier
 # This file is part of "anim_picker" and covered by MIT,
 # read LICENSE.md and COPYING.md for details.
-import gui
+from . import gui
 # reload(gui)
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 
 # =============================================================================
