@@ -292,7 +292,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         self.drag_active = False
         self.pan_active = False
         self.zoom_active = False
-        self.auto_frame_active = True
+        self.auto_frame_active = False
 
         # Disable scroll bars
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
