@@ -1,7 +1,13 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
+
 # python
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
 import os
 import platform
 
@@ -272,7 +278,7 @@ class CtrlListWidgetItem(QtWidgets.QListWidgetItem):
     def node(self):
         '''Return a usable string for maya instead of a QString
         '''
-        return unicode(self.text())
+        return str(self.text())
 
     def node_exists(self):
         '''Will check that the node from "text" exists
@@ -340,7 +346,7 @@ class BackgroundWidget(QtWidgets.QLabel):
             path = None
             self.background = None
         else:
-            self.background = unicode(path)
+            self.background = str(path)
 
         # Use stylesheet rather than pixmap for proper resizing support
         self._set_stylesheet_background()

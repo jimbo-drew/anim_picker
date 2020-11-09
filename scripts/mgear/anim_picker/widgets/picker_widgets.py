@@ -1,6 +1,14 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
+
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import *
+from builtins import object
 import re
 import copy
 import uuid
@@ -137,7 +145,7 @@ class CustomScriptEditDialog(QtWidgets.QDialog):
     def run_event(self):
         '''Run event button
         '''
-        cmd_str = unicode(self.cmd_widget.toPlainText())
+        cmd_str = str(self.cmd_widget.toPlainText())
 
         if self.picker_item:
             python_handlers.safe_code_exec(cmd_str,
@@ -148,7 +156,7 @@ class CustomScriptEditDialog(QtWidgets.QDialog):
     def get_values(self):
         '''Return dialog window result values
         '''
-        cmd_str = unicode(self.cmd_widget.toPlainText())
+        cmd_str = str(self.cmd_widget.toPlainText())
 
         return cmd_str, self.apply
 
@@ -214,8 +222,8 @@ class CustomMenuEditDialog(CustomScriptEditDialog):
     def get_values(self):
         '''Return dialog window result values
         '''
-        name_str = unicode(self.name_widget.text())
-        cmd_str = unicode(self.cmd_widget.toPlainText())
+        name_str = str(self.name_widget.text())
+        cmd_str = str(self.cmd_widget.toPlainText())
 
         return name_str, cmd_str, self.apply
 
@@ -291,8 +299,8 @@ class SearchAndReplaceDialog(QtWidgets.QDialog):
     def get_values(self):
         '''Return field values and button choice
         '''
-        search_str = unicode(self.search_widget.text())
-        replace_str = unicode(self.replace_widget.text())
+        search_str = str(self.search_widget.text())
+        replace_str = str(self.replace_widget.text())
         if self.apply:
             SearchAndReplaceDialog.__SEARCH_STR__ = search_str
             SearchAndReplaceDialog.__REPLACE_STR__ = replace_str
@@ -976,7 +984,7 @@ class ItemOptionsWindow(QtWidgets.QMainWindow):
         if self.event_disabled:
             return
 
-        text = unicode(text)
+        text = str(text)
         self.picker_item.set_text(text)
 
     def edit_text_size_event(self, value=1):
@@ -1713,7 +1721,7 @@ class PointHandleIndex(QtWidgets.QGraphicsSimpleTextItem):
     def setText(self, text):
         '''Override default setText method to force unicode on int index input
         '''
-        return QtWidgets.QGraphicsSimpleTextItem.setText(self, unicode(text))
+        return QtWidgets.QGraphicsSimpleTextItem.setText(self, str(text))
 
 
 class GraphicText(QtWidgets.QGraphicsSimpleTextItem):
@@ -1743,7 +1751,7 @@ class GraphicText(QtWidgets.QGraphicsSimpleTextItem):
     def get_text(self):
         '''Return element text
         '''
-        return unicode(self.text())
+        return str(self.text())
 
     def set_size(self, value=10.0):
         '''Set pointSizeF for text
@@ -2816,7 +2824,7 @@ class PickerItem(DefaultPolygon):
         return data
 
 
-class State():
+class State(object):
     '''State object, for easy state handling
     '''
 

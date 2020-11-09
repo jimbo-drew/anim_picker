@@ -1,10 +1,13 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-# Copyright (c) 2018 Guillaume Barlier
-# This file is part of "anim_picker" and covered by MIT,
-# read LICENSE.md and COPYING.md for details.
-# python
+from __future__ import unicode_literals
+
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
+from builtins import object
 import sys
 import os
 
@@ -62,7 +65,7 @@ def get_node_for_object(item):
 # =============================================================================
 # classes
 # =============================================================================
-class DataNode():
+class DataNode(object):
     # Pipeline
     __NODE__ = "PICKER_DATAS"
     __TAG__ = "picker_datas_node"
@@ -308,4 +311,4 @@ class DataNode():
 
         attrPlug = "{}.{}".format(self.name, self.__VERSION_ATTR__)
         cmds.setAttr(attrPlug, k=False, l=False)
-        cmds.setAttr(attrPlug, unicode(version), l=True, type="string")
+        cmds.setAttr(attrPlug, str(version), l=True, type="string")

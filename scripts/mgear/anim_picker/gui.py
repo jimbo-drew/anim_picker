@@ -1,12 +1,14 @@
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
-# Copyright (c) 2018 Guillaume Barlier
-# This file is part of "anim_picker" and covered by MIT,
-# read LICENSE.md and COPYING.md for details.
-# PyQt4 user interface for anim_picker
+from __future__ import unicode_literals
 
 # python
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import *
 import os
 import copy
 from functools import partial
@@ -181,7 +183,7 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
         '''
         picker_items = []
         # Filter picker items (from handles etc)
-        for item in self.items():
+        for item in list(self.items()):
             if not isinstance(item, picker_widgets.PickerItem):
                 continue
             picker_items.append(item)
@@ -434,7 +436,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
         # add moved pickers to undo_move_order list ---------------------------
         if not self.drag_active and self.__move_prompt:
-            for picker_uuid in self.tmp_picker_pos_info.keys():
+            for picker_uuid in list(self.tmp_picker_pos_info.keys()):
                 picker = self.scene().get_picker_by_uuid(picker_uuid)
                 if picker is None:
                     continue
@@ -528,7 +530,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             return
         if self.undo_move_order_index > 0:
             self.undo_move_order_index = self.undo_move_order_index - 1
-        for picker_uuid, undo_pos in self.undo_move_order[self.undo_move_order_index].iteritems():
+        for picker_uuid, undo_pos in self.undo_move_order[self.undo_move_order_index].items():
             picker = self.scene().get_picker_by_uuid(picker_uuid)
             if not picker:
                 continue
@@ -545,7 +547,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         if self.undo_move_order_index == -1:
             return
         if self.undo_move_order_index < undo_len:
-            for picker_uuid, undo_pos in self.undo_move_order[self.undo_move_order_index].iteritems():
+            for picker_uuid, undo_pos in self.undo_move_order[self.undo_move_order_index].items():
                 picker = self.scene().get_picker_by_uuid(picker_uuid)
                 if not picker:
                     continue
@@ -810,7 +812,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
     def toggle_all_handles_event(self, event=None):
         new_status = None
-        for item in self.scene().items():
+        for item in list(self.scene().items()):
             # Skip non picker items
             if not isinstance(item, picker_widgets.PickerItem):
                 continue
@@ -845,7 +847,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         '''
         if not path:
             return
-        path = unicode(path)
+        path = str(path)
 
         # Check that path exists
         if not (path and os.path.exists(path)):
@@ -911,7 +913,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         '''Return scene picker items in proper order (back to front)
         '''
         items = []
-        for item in self.scene().items():
+        for item in list(self.scene().items()):
             # Skip non picker graphic items
             if not isinstance(item, picker_widgets.PickerItem):
                 continue
@@ -1065,10 +1067,10 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
 
         # Open input window
         name, ok = QtWidgets.QInputDialog.getText(self,
-                                                  self.tr("Tab name"),
-                                                  self.tr('New name'),
+                                                  "Tab name",
+                                                  "New name",
                                                   QtWidgets.QLineEdit.Normal,
-                                                  self.tr(self.tabText(index)))
+                                                  self.tabText(index))
         if not (ok and name):
             return
 
@@ -1080,10 +1082,10 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
         '''
         # Open input window
         name, ok = QtWidgets.QInputDialog.getText(self,
-                                                  self.tr("Create new tab"),
-                                                  self.tr("Tab name"),
+                                                  "Create new tab",
+                                                  "Tab name",
                                                   QtWidgets.QLineEdit.Normal,
-                                                  self.tr(""))
+                                                  "")
         if not (ok and name):
             return
 
@@ -1139,7 +1141,7 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
         '''
         data = []
         for i in range(self.count()):
-            name = unicode(self.tabText(i))
+            name = str(self.tabText(i))
             tab_data = self.widget(i).get_data()
             data.append({"name": name, "data": tab_data})
         return data
@@ -1329,17 +1331,9 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         load_btn.setToolTip("Load from file")
         btns_layout.addWidget(load_btn)
 
-        # Load from node
-        # if not __EDIT_MODE__.get():
-        #     self.char_from_node_btn = basic.CallbackButton(
-        #         callback=self.load_from_sel_node)
-        #     self.char_from_node_btn.setText("Load from selection")
-        #     btns_layout.addWidget(self.char_from_node_btn)
-
         # Refresh button
         self.char_refresh_btn = basic.CallbackButton(callback=self.refresh)
         self.char_refresh_btn.setText("Refresh")
-        # self.char_refresh_btn.setFixedWidth(60)
         btns_layout.addWidget(self.char_refresh_btn)
 
         # Edit buttons
@@ -1600,10 +1594,10 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         '''
         # Open input window
         name, ok = QtWidgets.QInputDialog.getText(self,
-                                                  self.tr("New character"),
-                                                  self.tr('Node name'),
+                                                  'New character',
+                                                  'Node name',
                                                   QtWidgets.QLineEdit.Normal,
-                                                  self.tr('PICKER_DATA'))
+                                                  'PICKER_DATA')
         if not (ok and name):
             return
 
@@ -1612,7 +1606,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
             return
 
         # Create new data node
-        data_node = picker_node.DataNode(name=unicode(name))
+        data_node = picker_node.DataNode(name=str(name))
         data_node.create()
         self.refresh()
         self.make_node_active(data_node)
