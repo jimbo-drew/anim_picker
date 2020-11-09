@@ -33,36 +33,6 @@ from handlers import __SELECTION__
 # reload(picker_widgets)
 # reload(overlay_widgets)
 
-
-# dpi beta test ---------------------------------------------------------------
-os.environ["_LOGICAL_DPI"] = str(pyqt.maya_main_window().logicalDpiX())
-
-
-def get_logicaldpi():
-    """attempting to "cache" the query to the maya main window for speed
-
-    Returns:
-        int: dpi of the monitor
-    """
-    return int(os.environ.get("_LOGICAL_DPI")) or 96
-
-
-def dpi_scale(value, default=96, min_=1, max_=2):
-    """Scale the provided value by the scale that maya is using
-    which is derived from the 'average' dpi of 96 from windows, linux, osx.
-
-    Args:
-        value (int, float): value to scale
-        default (int, optional): assumed default from various platforms
-        min_ (int, optional): if you do not want the value under 96 dpi
-        max_ (int, optional): if you do not want a value higher than 200% scale
-
-    Returns:
-        # int, float: scaled value
-    """
-    return value * max(min_, min(get_logicaldpi() / float(default), max_))
-
-
 # constants -------------------------------------------------------------------
 try:
     _CLIPBOARD
@@ -321,6 +291,8 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         self.scene_mouse_origin = QtCore.QPointF()
         self.drag_active = False
         self.pan_active = False
+        self.zoom_active = False
+        self.auto_frame_active = True
 
         # Disable scroll bars
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -384,6 +356,19 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             self.pan_active = True
             self.scene_mouse_origin = self.mapToScene(event.pos())
 
+        # zoom support added for the mouse, for those pen/tablet users
+        elif event.buttons() == QtCore.Qt.RightButton and \
+                event.modifiers() == QtCore.Qt.AltModifier:
+            self.zoom_active = True
+            self.setDragMode(self.ScrollHandDrag)
+            self.scene_mouse_origin = self.mapToGlobal(event.pos())
+            cursor_pos = QtGui.QVector2D(self.mapToGlobal(self.scene_mouse_origin))
+            screen = QtWidgets.QApplication.instance().primaryScreen()
+            rect = screen.availableGeometry()
+            self.top_left_pos = QtGui.QVector2D(rect.topLeft())
+            self.zoom_delta = self.top_left_pos.distanceToPoint(cursor_pos)
+            self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorViewCenter)
+
     def mouseMoveEvent(self, event):
         result = QtWidgets.QGraphicsView.mouseMoveEvent(self, event)
 
@@ -404,6 +389,18 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             new_center = current_center - (scene_paning -
                                            self.scene_mouse_origin)
             self.centerOn(new_center)
+
+        if self.zoom_active:
+            cursor_pos = QtGui.QVector2D(self.mapToGlobal(event.pos()))
+            current_delta = self.top_left_pos.distanceToPoint(cursor_pos)
+
+            factor = 1.05
+            if current_delta < self.zoom_delta:
+                factor = 0.95
+
+            # Apply zoom
+            self.scale(factor, factor)
+            self.zoom_delta = current_delta
 
         return result
 
@@ -439,8 +436,8 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
                 if picker is None:
                     continue
                 self.tmp_picker_pos_info[picker_uuid].extend([picker.x(),
-                                                             picker.y(),
-                                                             picker.rotation()])
+                                                              picker.y(),
+                                                              picker.rotation()])
             if self.undo_move_order_index in [-1]:
                 self.undo_move_order.append(copy.deepcopy(self.tmp_picker_pos_info))
             else:
@@ -479,7 +476,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
                     picker_widgets.select_picker_controls(picker_items, event)
 
         # Middle mouse view panning
-        if (self.pan_active and event.button() == QtCore.Qt.MidButton):
+        if self.pan_active and event.button() == QtCore.Qt.MidButton:
             current_center = self.get_center_pos()
             scene_drag_end = self.mapToScene(event.pos())
 
@@ -488,6 +485,12 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             self.centerOn(new_center)
             self.pan_active = False
             self.setDragMode(self.RubberBandDrag)
+
+        # zoom support added for the mouse, for those pen/tablet users
+        if self.zoom_active and event.button() == QtCore.Qt.RightButton:
+            self.zoom_active = False
+            self.setDragMode(self.RubberBandDrag)
+
         self.drag_active = False
         return result
 
@@ -566,6 +569,9 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
     def contextMenuEvent(self, event, mapped_pos=None):
         '''Right click menu options
         '''
+        if event.modifiers() == QtCore.Qt.AltModifier:
+            # alt may indicate zooming enabled so no menu
+            return
         # Item area
         picker_item = [item for item in self.get_picker_items()
                        if item._hovered]
@@ -640,11 +646,15 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         reset_view_action = QtWidgets.QAction("Reset view", None)
         reset_view_action.triggered.connect(self.fit_scene_content)
         menu.addAction(reset_view_action)
-        frame_selection_view_action = QtWidgets.QAction(
-            "Frame Selection", None)
-        frame_selection_view_action.triggered.connect(
-            self.fit_selection_content)
+        frame_selection_view_action = QtWidgets.QAction("Frame Selection", None)
+        frame_selection_view_action.triggered.connect(self.fit_selection_content)
         menu.addAction(frame_selection_view_action)
+
+        auto_frame_selection_view_action = QtWidgets.QAction("Auto Frame view", None)
+        auto_frame_selection_view_action.setCheckable(True)
+        auto_frame_selection_view_action.setChecked(self.auto_frame_active)
+        auto_frame_selection_view_action.triggered.connect(self.set_auto_frame_view)
+        menu.addAction(auto_frame_selection_view_action)
 
         # Open context menu under mouse
         menu.exec_(event.globalPos())
@@ -653,7 +663,8 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         '''Overload to force scale scene content to fit view
         '''
         # Fit scene content to view
-        self.fit_scene_content()
+        if self.auto_frame_active:
+            self.fit_scene_content()
 
         # Run default resizeEvent
         return QtWidgets.QGraphicsView.resizeEvent(self, *args, **kwargs)
@@ -664,14 +675,20 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         scene_rect = self.scene().get_bounding_rect(margin=8)
         self.fitInView(scene_rect, QtCore.Qt.KeepAspectRatio)
 
+    def set_auto_frame_view(self):
+        '''Enable auto fit when a resize event happens
+        '''
+        # Fit scene content to view
+        if not self.auto_frame_active:
+            self.fit_scene_content()
+        self.auto_frame_active = not self.auto_frame_active
+
     def fit_selection_content(self):
         '''Will fit the selected item to view, by scaling it
         '''
         scene_rect = self.scene().get_bounding_rect(margin=8, selection=True)
         if scene_rect:
             self.fitInView(scene_rect, QtCore.Qt.KeepAspectRatio)
-        # self.fitInView(self.scene().selectionArea().boundingRect(),
-        #                QtCore.Qt.KeepAspectRatio)
 
     def get_color_picker_override(self, picker, ctrl):
         """Get the maya override color and return picker equivelant
@@ -829,7 +846,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
         # Check that path exists
         if not (path and os.path.exists(path)):
-            print "# background image not found: '{}'".format(path)
+            print("# background image not found: '{}'".format(path))
             return
 
         self.background_image_path = path
@@ -1153,8 +1170,8 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
 
         # Window size
         # (default size to provide a 450/700 for tab area and proper img size)
-        self.default_width = dpi_scale(476)
-        self.default_height = dpi_scale(837)
+        self.default_width = pyqt.dpi_scale(476)
+        self.default_height = pyqt.dpi_scale(837)
 
         # Default vars
         self.childs = []
@@ -1265,7 +1282,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # Create group box
         box = QtWidgets.QGroupBox()
         box.setTitle("Character Selector")
-        box.setFixedHeight(dpi_scale(80))
+        box.setFixedHeight(pyqt.dpi_scale(80))
 
         layout.addWidget(box)
 

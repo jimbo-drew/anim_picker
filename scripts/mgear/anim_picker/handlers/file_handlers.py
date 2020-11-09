@@ -22,7 +22,7 @@ def _importData(file_path):
             data = json.load(f)
             return data
     except Exception as e:
-        print e
+        print(e)
 
 
 def _exportData(data, file_path):
@@ -30,7 +30,7 @@ def _exportData(data, file_path):
         with open(file_path, 'w') as f:
             json.dump(data, f, sort_keys=False, indent=4)
     except Exception as e:
-        print e
+        print(e)
 
 
 def _convert_path_token(file_path):

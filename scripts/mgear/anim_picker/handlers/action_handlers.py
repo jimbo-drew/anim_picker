@@ -62,9 +62,7 @@ class SpaceChangeList(QtWidgets.QMenu):
             self.listWidget.setCurrentRow(
                 anim_utils.getComboIndex_with_namespace(
                     self.namespace, self.ui_host, self.combo_attr))
-            # model = self.namespace + ":" + self.ui_host
-            # print self.ctl
-            # print model
+
             anim_utils.ParentSpaceTransfer.showUI(self.listWidget,
                                                   self.ui_host,
                                                   stripNamespace(self.ui_host),
@@ -98,29 +96,34 @@ def show_space_chage_list(namespace,
         self_widget (obj): __SELF__ the anim picker widget reference
         env_init (bool): __INIT__  flag
     """
-    if env_init:
-        key_list = anim_utils.getComboKeys_with_namespace(
-            namespace, ui_host, combo_attr)
-        current_idx = anim_utils.getComboIndex_with_namespace(
-            namespace, ui_host, combo_attr)
-        self_widget.text.set_text(key_list[current_idx])
+    try:
+        if env_init:
+            key_list = anim_utils.getComboKeys_with_namespace(
+                namespace, ui_host, combo_attr)
+            current_idx = anim_utils.getComboIndex_with_namespace(
+                namespace, ui_host, combo_attr)
+            self_widget.text.set_text(key_list[current_idx])
 
-    else:
-        maya_window = pyqt.get_main_window()
-        ql = pyqt.get_instance(maya_window, SpaceChangeList)
-        if ql:
-            ql.deleteLater()
-        # create a new instance
+        else:
+            maya_window = pyqt.get_main_window()
+            ql = pyqt.get_instance(maya_window, SpaceChangeList)
+            if ql:
+                ql.deleteLater()
+            # create a new instance
 
-        ql = SpaceChangeList(namespace,
-                             ui_host,
-                             combo_attr,
-                             ctl,
-                             self_widget,
-                             maya_window)
+            ql = SpaceChangeList(namespace,
+                                 ui_host,
+                                 combo_attr,
+                                 ctl,
+                                 self_widget,
+                                 maya_window)
 
-        pyqt.position_window(ql)
-        ql.exec_()
+            pyqt.position_window(ql)
+            ql.exec_()
+    except Exception as e:
+        print("Could not build space change list for ctl {}. Rig components renamed?".format(ctl))
+        print("Error: " + str(e))
+        return
 
 
 def spine_ik_fk_transfer(namespace, fkControls, ikControls):

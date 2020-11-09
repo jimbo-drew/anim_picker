@@ -353,7 +353,7 @@ class LoadOverlayWidget(OverlayWidget):
     def check_selection(self, index):
         if self.namespace_cbox.currentText() == "-Refresh-":
             self.update_namespaces()
-            print "Namespaces refreshed..."
+            print("Namespaces refreshed...")
 
     def load_namespace_options(self):
         layout = QtWidgets.QHBoxLayout()

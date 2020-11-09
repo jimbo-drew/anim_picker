@@ -17,7 +17,8 @@ from mgear.anim_picker.handlers import (__EDIT_MODE__,
 
 # constants -------------------------------------------------------------------
 SCRIPT_DOC_HEADER = \
-"""# Variable reference for custom script execution on pickers.
+"""
+# Variable reference for custom script execution on pickers.
 # Use the following variables in your code to access related data:
 # __CONTROLS__ for picker item associated controls (will return sets and not content).
 # __FLATCONTROLS__ for associated controls and control set content.
@@ -1534,8 +1535,7 @@ class PointHandle(DefaultPolygon):
     def scale_pos(self, x=1.0, y=1.0):
         '''Scale handle local position
         '''
-        factor = QtGui.QTransform().scale(x, y)
-        self.setPos(self.pos() * factor)
+        self.setPos(self.pos().x() * x, self.pos().y() * y)
         self.update()
 
     def enable_index_draw(self, status=False):
@@ -1999,12 +1999,6 @@ class PickerItem(DefaultPolygon):
         maya_window = pyqt.maya_main_window()
         if maya_window:
             maya_window.setFocus()
-
-    # def mouseReleaseEvent(self, event):
-    #     if __EDIT_MODE__.get():s
-    #         print(22222)
-    #         print(self.parent().drag_active)
-    #     super(PickerItem, self).mouseReleaseEvent(event)
 
     def mouse_press_select_event(self, event, modifiers=None):
         '''
@@ -2547,8 +2541,7 @@ class PickerItem(DefaultPolygon):
 
         # Scale position
         if world:
-            factor = QtGui.QTransform().scale(x, y)
-            self.setPos(self.pos() * factor)
+            self.setPos(self.pos().x() * x, self.pos().y() * y)
 
         self.update()
 
