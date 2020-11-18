@@ -89,8 +89,8 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
     Had to add z_index support since there was a little z
     conflict when "moving" items to back/front in edit mode
     '''
-    __DEFAULT_SCENE_WIDTH__ = 4000
-    __DEFAULT_SCENE_HEIGHT__ = 4000
+    __DEFAULT_SCENE_WIDTH__ = 6000
+    __DEFAULT_SCENE_HEIGHT__ = 6000
 
     def __init__(self, parent=None):
         QtWidgets.QGraphicsScene.__init__(self, parent=parent)
@@ -255,8 +255,8 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
 class GraphicViewWidget(QtWidgets.QGraphicsView):
     '''Graphic view widget that display the "polygons" picker items
     '''
-    __DEFAULT_SCENE_WIDTH__ = 4000
-    __DEFAULT_SCENE_HEIGHT__ = 4000
+    __DEFAULT_SCENE_WIDTH__ = 6000
+    __DEFAULT_SCENE_HEIGHT__ = 6000
 
     def __init__(self,
                  namespace=None,
@@ -558,11 +558,20 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         Args:
             event (QtCore.QEvent): keyboard event
         """
-        modifiers = event.modifiers()
-        if modifiers == QtCore.Qt.ControlModifier and event.key() == QtCore.Qt.Key_Z:
-            self.undo_move()
-        elif modifiers == QtCore.Qt.ControlModifier and event.key() == QtCore.Qt.Key_Y:
-            self.redo_move()
+        if __EDIT_MODE__.get():
+            modifiers = event.modifiers()
+            if (modifiers == QtCore.Qt.ControlModifier and
+                    event.key() == QtCore.Qt.Key_Z):
+                self.undo_move()
+                event.accept()
+            elif (modifiers == QtCore.Qt.ControlModifier and
+                    event.key() == QtCore.Qt.Key_Y):
+                self.redo_move()
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.ignore()
 
     # undo --------------------------------------------------------------------
 

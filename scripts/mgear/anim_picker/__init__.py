@@ -2,9 +2,11 @@
 # This file is part of "anim_picker" and covered by MIT,
 # read LICENSE.md and COPYING.md for details.
 import gui
-reload(gui)
 
-__version__ = "1.1.0"
+# debugging
+# reload(gui)
+
+__version__ = "1.2.0"
 
 
 # =============================================================================
