@@ -1,7 +1,11 @@
-# Copyright (c) 2018 Guillaume Barlier
-# This file is part of "anim_picker" and covered by MIT,
-# read LICENSE.md and COPYING.md for details.
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 import os
 import json
 import functools
@@ -22,7 +26,7 @@ def _importData(file_path):
             data = json.load(f)
             return data
     except Exception as e:
-        print e
+        print(e)
 
 
 def _exportData(data, file_path):
@@ -30,7 +34,7 @@ def _exportData(data, file_path):
         with open(file_path, 'w') as f:
             json.dump(data, f, sort_keys=False, indent=4)
     except Exception as e:
-        print e
+        print(e)
 
 
 def _convert_path_token(file_path):

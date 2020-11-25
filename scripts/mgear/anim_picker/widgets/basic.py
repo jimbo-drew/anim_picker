@@ -1,5 +1,15 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 # python
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
 import os
+import platform
 
 # dcc
 import maya.cmds as cmds
@@ -10,8 +20,16 @@ from mgear.vendor.Qt import QtCore, QtWidgets, QtGui
 # module
 from mgear.anim_picker.handlers import __EDIT_MODE__
 
-# seems to conflicts with maya viewports...
-__USE_OPENGL__ = True
+# Some platforms have issue with OpenGl and PySide2-2.0.0.alpha
+platform_name = platform.system()
+if platform_name == "Windows":
+    __USE_OPENGL__ = True
+elif platform_name == "Linux":
+    __USE_OPENGL__ = True
+elif platform_name == "Darwin":
+    __USE_OPENGL__ = False
+else:
+    __USE_OPENGL__ = False
 
 # =============================================================================
 # generic functions
@@ -260,7 +278,7 @@ class CtrlListWidgetItem(QtWidgets.QListWidgetItem):
     def node(self):
         '''Return a usable string for maya instead of a QString
         '''
-        return unicode(self.text())
+        return str(self.text())
 
     def node_exists(self):
         '''Will check that the node from "text" exists
@@ -328,7 +346,7 @@ class BackgroundWidget(QtWidgets.QLabel):
             path = None
             self.background = None
         else:
-            self.background = unicode(path)
+            self.background = str(path)
 
         # Use stylesheet rather than pixmap for proper resizing support
         self._set_stylesheet_background()

@@ -1,4 +1,13 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 # python
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
 import os
 
 # dcc
@@ -196,7 +205,7 @@ class SaveOverlayWidget(OverlayWidget):
         '''
         file_path = self.file_path_le.text()
         if file_path:
-            return unicode(file_path)
+            return str(file_path)
         return None
 
     def save_event(self):
@@ -353,7 +362,7 @@ class LoadOverlayWidget(OverlayWidget):
     def check_selection(self, index):
         if self.namespace_cbox.currentText() == "-Refresh-":
             self.update_namespaces()
-            print "Namespaces refreshed..."
+            print("Namespaces refreshed...")
 
     def load_namespace_options(self):
         layout = QtWidgets.QHBoxLayout()
@@ -389,17 +398,18 @@ class LoadOverlayWidget(OverlayWidget):
 
     def new_picker_node(self, data, namespace):
         name, ok = QtWidgets.QInputDialog.getText(self,
-                                                  self.tr("New character"),
-                                                  self.tr('Node name'),
+                                                  "New character",
+                                                  "Node name",
                                                   QtWidgets.QLineEdit.Normal,
-                                                  self.tr('PICKER_DATA'))
+                                                  "PICKER_DATA")
+
         if not (ok and name):
             return
 
         # Create new data node
         if namespace != "Root" and cmds.namespace(ex=namespace):
             name = "{}:{}".format(namespace, name)
-        data_node = picker_node.DataNode(name=unicode(name))
+        data_node = picker_node.DataNode(name=str(name))
         data_node.create()
         data_node.write_data(data=data)
         data_node.read_data()

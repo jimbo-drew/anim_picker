@@ -1,10 +1,14 @@
-# Copyright (c) 2018 Guillaume Barlier
-# This file is part of "anim_picker" and covered by MIT,
-# read LICENSE.md and COPYING.md for details.
-import gui
-# reload(gui)
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
-__version__ = "1.1.0"
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from . import gui
+
+__version__ = "1.2.0"
 
 
 # =============================================================================
