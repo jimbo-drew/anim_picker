@@ -118,13 +118,12 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
 
         # Get item boundingBox
         if selection:
-            # scene_rect = self.selectionArea().boundingRect()
             sel_items = self.get_selected_items()
             if not sel_items:
                 return
             scene_rect = QtCore.QRectF()
 
-            #init coordinates with the first element
+            # init coordinates with the first element
             rec = sel_items[0].boundingRect().getCoords()
             x1 = (rec[0] + sel_items[0].x())
             y1 = (rec[1] + sel_items[0].y())
@@ -292,7 +291,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         self.drag_active = False
         self.pan_active = False
         self.zoom_active = False
-        self.auto_frame_active = False
+        self.auto_frame_active = True
 
         # Disable scroll bars
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -1193,6 +1192,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # Setup ui
         self.cb_manager = callbackManager.CallbackManager()
         self.setup()
+        # self.windowHandle().screenChanged.connect
 
     def setup(self):
         '''Setup interface
@@ -1209,11 +1209,6 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # Add window fields
         self.add_character_selector()
         self.add_tab_widget()
-
-        # TODO remove temporary addition of the space otpions
-        # self.spaces_widget = basic.SpaceSwitcher()
-        # self.main_vertical_layout.addWidget(self.spaces_widget)
-        # self.spaces_widget.set_tab_widget(self.tab_widget)
 
         # if the window is not dockable we can control the opacity
         # MayaQWidgetDockableMixin overrides setWindowsOpacity
@@ -1258,6 +1253,8 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
             if self.auto_opacity_btn.isChecked():
                 self.change_opacity()
                 return True
+
+        # QtCore.QEvent.Type.ScreenChangeInternal
 
         # hide main tab widget for os compatibility
         if QObject in getattr(self, "overlays", []):
@@ -1322,7 +1319,6 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         if not __EDIT_MODE__.get():
             btns_layout.addWidget(self.checkbox)
 
-
         # About btn
         about_btn = basic.CallbackButton(callback=self.show_about_infos)
         about_btn.setText("?")
@@ -1335,17 +1331,9 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         load_btn.setToolTip("Load from file")
         btns_layout.addWidget(load_btn)
 
-        # Load from node
-        # if not __EDIT_MODE__.get():
-        #     self.char_from_node_btn = basic.CallbackButton(
-        #         callback=self.load_from_sel_node)
-        #     self.char_from_node_btn.setText("Load from selection")
-        #     btns_layout.addWidget(self.char_from_node_btn)
-
         # Refresh button
         self.char_refresh_btn = basic.CallbackButton(callback=self.refresh)
         self.char_refresh_btn.setText("Refresh")
-        # self.char_refresh_btn.setFixedWidth(60)
         btns_layout.addWidget(self.char_refresh_btn)
 
         # Edit buttons
@@ -1355,14 +1343,14 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
             # Add New  button
             self.new_char_btn = basic.CallbackButton(callback=self.new_character)
             self.new_char_btn.setText("New")
-            self.new_char_btn.setFixedWidth(40)
+            self.new_char_btn.setFixedWidth(pyqt.dpi_scale(40))
 
             btns_layout.addWidget(self.new_char_btn)
 
             # Add Save  button
             self.save_char_btn = basic.CallbackButton(callback=self.save_character)
             self.save_char_btn.setText("Save")
-            self.save_char_btn.setFixedWidth(40)
+            self.save_char_btn.setFixedWidth(pyqt.dpi_scale(40))
 
             btns_layout.addWidget(self.save_char_btn)
 
@@ -1473,16 +1461,12 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
             return
 
         size = self.size()
-        # pos = self.pos()
 
         self.about_widget.resize(size)
-        # self.about_widget.move(pos)
 
         self.save_widget.resize(size)
-        # self.save_widget.move(pos)
 
         self.load_widget.resize(size)
-        # self.load_widget.move(pos)
 
         return super(MainDockWindow, self).resizeEvent(event)
 
