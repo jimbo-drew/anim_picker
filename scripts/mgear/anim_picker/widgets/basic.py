@@ -369,6 +369,7 @@ class SnapshotWidget(BackgroundWidget):
 
         self.setFixedWidth(pyqt.dpi_scale(80))
         self.setFixedHeight(pyqt.dpi_scale(80))
+        self.setScaledContents(True)
 
         self.set_background()
 

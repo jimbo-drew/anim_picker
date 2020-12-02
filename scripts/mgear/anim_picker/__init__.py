@@ -6,8 +6,6 @@ import gui
 # debugging
 # reload(gui)
 
-__version__ = "1.2.0"
-
 
 # =============================================================================
 # Load user interface function

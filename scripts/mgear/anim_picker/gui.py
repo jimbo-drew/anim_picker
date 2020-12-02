@@ -14,15 +14,18 @@ import pymel.core as pm
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 # mgear
-from mgear.core import callbackManager, pyqt
+import mgear
+from mgear.core import pyqt
+from mgear.core import callbackManager
 from mgear.vendor.Qt import QtCore, QtWidgets, QtOpenGL, QtGui
 # from PySide2 import QtCore, QtWidgets, QtOpenGL, QtGui
 
 # module
+from . import version
 from . import picker_node
-from mgear.anim_picker.widgets import basic
-from mgear.anim_picker.widgets import picker_widgets
-from mgear.anim_picker.widgets import overlay_widgets
+from .widgets import basic
+from .widgets import picker_widgets
+from .widgets import overlay_widgets
 
 from handlers import __EDIT_MODE__
 from handlers import __SELECTION__
@@ -38,6 +41,8 @@ try:
     _CLIPBOARD
 except NameError as e:
     _CLIPBOARD = []
+
+ANIM_PICKER_TITLE = "mGear {m_version} | Anim Picker {ap_version}"
 
 # maya color index
 MAYA_OVERRIDE_COLOR = {
@@ -74,6 +79,11 @@ MAYA_OVERRIDE_COLOR = {
     30: [41, 8, 91],
     31: [91, 8, 37]
 }
+
+GROUPBOX_BG_CSS = """QGroupBox {{
+      background-color: rgba{color};
+      border: 0px solid rgba{color};
+}}"""
 
 
 # =============================================================================
@@ -1166,7 +1176,7 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
 # class MainDockWindow(QtWidgets.QWidget):
 class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
     __OBJ_NAME__ = "ctrl_picker_window"
-    __TITLE__ = "Anim Picker"
+    __TITLE__ = ANIM_PICKER_TITLE.format(m_version=mgear.getVersion(), ap_version=version.version)
 
     def __init__(self,
                  parent=None,
@@ -1278,22 +1288,44 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         '''
         self.resize(self.default_width, self.default_height)
 
+    def toggle_character_selector(self, checked):
+        """Toggle the visibility of the character select widget
+        """
+        if checked:
+            self.char_select_widget.show()
+        else:
+            self.char_select_widget.hide()
+
     def add_character_selector(self):
         '''Add Character comboBox selector
         '''
-        # Create layout
-        layout = QtWidgets.QHBoxLayout()
-        self.main_vertical_layout.addLayout(layout)
-
         # Create group box
-        box = QtWidgets.QGroupBox()
-        box.setTitle("Character Selector")
-        box.setFixedHeight(pyqt.dpi_scale(80))
+        box = QtWidgets.QGroupBox("Character Selector")
+        bg_color = self.palette().color(QtGui.QPalette.Window).getRgb()
+        cc_style_sheet = GROUPBOX_BG_CSS.format(color=bg_color)
+        box.setStyleSheet(cc_style_sheet)
+        box.setContentsMargins(0, 0, 0, 0)
+        box.setMinimumHeight(0)
+        box.setMaximumHeight(pyqt.dpi_scale(80))
+        box.setCheckable(True)
+        box.setChecked(True)
+        box.clicked.connect(self.toggle_character_selector)
 
-        layout.addWidget(box)
+        self.char_select_widget = QtWidgets.QWidget()
+        self.char_select_widget.setContentsMargins(0, 5, 0, 0)
+        tmp_layout = QtWidgets.QHBoxLayout(box)
+        tmp_layout.setSpacing(0)
+        tmp_layout.addWidget(self.char_select_widget)
 
-        # Add layout
-        box_layout = QtWidgets.QVBoxLayout(box)
+        # Create layout
+        layout = QtWidgets.QHBoxLayout(self.char_select_widget)
+
+        # Create character picture widget
+        self.pic_widget = basic.SnapshotWidget()
+
+        box_layout = QtWidgets.QVBoxLayout()
+        layout.addLayout(box_layout)
+        layout.addWidget(self.pic_widget, QtCore.Qt.AlignCenter)
 
         # Add combo box
         self.char_selector_cb = basic.CallbackComboBox(
@@ -1353,10 +1385,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
             self.save_char_btn.setFixedWidth(pyqt.dpi_scale(40))
 
             btns_layout.addWidget(self.save_char_btn)
-
-        # Create character picture widget
-        self.pic_widget = basic.SnapshotWidget()
-        layout.addWidget(self.pic_widget)
+        self.main_vertical_layout.addWidget(box)
 
     def add_tab_widget(self, name="default"):
         '''Add control display field
