@@ -4,13 +4,13 @@ from __future__ import division
 from __future__ import unicode_literals
 
 
-from builtins import str
 from mgear.core import anim_utils
 from mgear.core.anim_utils import stripNamespace
 
-from mgear.vendor.Qt import QtWidgets
 from mgear.core import pyqt
+from mgear.vendor.Qt import QtWidgets
 
+# from PySide2 import QtWidgets
 
 class SpaceChangeList(QtWidgets.QMenu):
 

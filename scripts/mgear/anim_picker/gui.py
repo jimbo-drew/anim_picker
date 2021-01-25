@@ -4,10 +4,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 # python
-from builtins import str
-from builtins import range
-from builtins import *
-
 import os
 import copy
 from functools import partial
@@ -15,14 +11,24 @@ from functools import partial
 # dcc
 from maya import cmds
 import pymel.core as pm
+
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 # mgear
-import mgear
+# import mgear
 from mgear.core import pyqt
 from mgear.core import callbackManager
-from mgear.vendor.Qt import QtCore, QtWidgets, QtOpenGL, QtGui
-# from PySide2 import QtCore, QtWidgets, QtOpenGL, QtGui
+
+from mgear.vendor.Qt import QtGui
+from mgear.vendor.Qt import QtCore
+from mgear.vendor.Qt import QtOpenGL
+from mgear.vendor.Qt import QtWidgets
+
+# debugging
+# from PySide2 import QtGui
+# from PySide2 import QtCore
+# from PySide2 import QtOpenGL
+# from PySide2 import QtWidgets
 
 # module
 from . import version
@@ -33,12 +39,6 @@ from .widgets import overlay_widgets
 
 from .handlers import __EDIT_MODE__
 from .handlers import __SELECTION__
-
-# debugging
-# reload(basic)
-# reload(picker_node)
-# reload(picker_widgets)
-# reload(overlay_widgets)
 
 # constants -------------------------------------------------------------------
 try:
@@ -89,6 +89,9 @@ GROUPBOX_BG_CSS = """QGroupBox {{
       border: 0px solid rgba{color};
 }}"""
 
+
+_mgear_version = 3
+# _mgear_version = mgear.getVersion()
 
 # =============================================================================
 # Dependencies ---
@@ -1180,7 +1183,7 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
 # class MainDockWindow(QtWidgets.QWidget):
 class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
     __OBJ_NAME__ = "ctrl_picker_window"
-    __TITLE__ = ANIM_PICKER_TITLE.format(m_version=mgear.getVersion(), ap_version=version.version)
+    __TITLE__ = ANIM_PICKER_TITLE.format(m_version=_mgear_version, ap_version=version.version)
 
     def __init__(self,
                  parent=None,

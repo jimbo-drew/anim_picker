@@ -4,8 +4,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 
-import mgear.menu
 import mgear
+import mgear.menu
 import pymel.core as pm
 
 

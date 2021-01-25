@@ -4,15 +4,20 @@ from __future__ import division
 from __future__ import unicode_literals
 
 # python
-from builtins import str
-
 import os
 
 # dcc
 import maya.cmds as cmds
 
 # mgear
-from mgear.vendor.Qt import QtCore, QtWidgets, QtGui
+from mgear.vendor.Qt import QtGui
+from mgear.vendor.Qt import QtCore
+from mgear.vendor.Qt import QtWidgets
+
+# debugging
+# from PySide2 import QtGui
+# from PySide2 import QtCore
+# from PySide2 import QtWidgets
 
 # module
 from mgear.anim_picker import picker_node
@@ -31,11 +36,6 @@ class OverlayWidget(QtWidgets.QWidget):
     Transparent overlay type widget
 
     add resize to parent resetEvent to resize this event window as:
-    #def resizeEvent(self, event):
-    #    self.overlay.resize(self.widget().size())
-    #    self.overlay.move(self.widget().pos())
-    #    event.accept()
-
     '''
 
     def __init__(self, parent=None):

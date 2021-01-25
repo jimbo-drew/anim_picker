@@ -1,22 +1,28 @@
+from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
-from __future__ import print_function
 from __future__ import unicode_literals
 
 
-from builtins import str
-from builtins import range
-from builtins import object
 import re
 import copy
 import uuid
 
-from math import sin, cos, pi
+from math import pi
+from math import sin
+from math import cos
 
 import maya.cmds as cmds
 
 from mgear.core import pyqt
-from mgear.vendor.Qt import QtCore, QtWidgets, QtGui
+from mgear.vendor.Qt import QtGui
+from mgear.vendor.Qt import QtCore
+from mgear.vendor.Qt import QtWidgets
+
+# debugging
+# from PySide2 import QtGui
+# from PySide2 import QtCore
+# from PySide2 import QtWidgets
 
 from mgear.anim_picker.widgets import basic
 from mgear.anim_picker.handlers import (__EDIT_MODE__,
@@ -26,7 +32,7 @@ from mgear.anim_picker.handlers import (__EDIT_MODE__,
 
 # constants -------------------------------------------------------------------
 SCRIPT_DOC_HEADER = \
-"""
+    """
 # Variable reference for custom script execution on pickers.
 # Use the following variables in your code to access related data:
 # __CONTROLS__ for picker item associated controls (will return sets and not content).
@@ -61,6 +67,7 @@ def select_picker_controls(picker_items, event, modifiers=None):
     # Alt case (remove)
     if modifiers == QtCore.Qt.AltModifier:
         modifier = "alt"
+
     picker_controls = []
     for pItem in picker_items:
         picker_controls.extend(pItem.get_controls())

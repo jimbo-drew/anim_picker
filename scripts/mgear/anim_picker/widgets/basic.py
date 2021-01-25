@@ -1,12 +1,9 @@
+from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
-from __future__ import print_function
 from __future__ import unicode_literals
 
 # python
-from builtins import str
-from builtins import *
-
 import os
 import platform
 
@@ -14,7 +11,14 @@ import platform
 import maya.cmds as cmds
 
 # mgear
-from mgear.vendor.Qt import QtCore, QtWidgets, QtGui
+from mgear.vendor.Qt import QtGui
+from mgear.vendor.Qt import QtCore
+from mgear.vendor.Qt import QtWidgets
+
+# debugging
+# from PySide2 import QtGui
+# from PySide2 import QtCore
+# from PySide2 import QtWidgets
 
 # module
 from mgear.core import pyqt
