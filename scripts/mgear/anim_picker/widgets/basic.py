@@ -17,6 +17,7 @@ import maya.cmds as cmds
 from mgear.vendor.Qt import QtCore, QtWidgets, QtGui
 
 # module
+from mgear.core import pyqt
 from mgear.anim_picker.handlers import __EDIT_MODE__
 
 # Some platforms have issue with OpenGl and PySide2-2.0.0.alpha
@@ -374,8 +375,9 @@ class SnapshotWidget(BackgroundWidget):
     def __init__(self, parent=None):
         BackgroundWidget.__init__(self, parent)
 
-        self.setFixedWidth(80)
-        self.setFixedHeight(80)
+        self.setFixedWidth(pyqt.dpi_scale(80))
+        self.setFixedHeight(pyqt.dpi_scale(80))
+        self.setScaledContents(True)
 
         self.set_background()
 

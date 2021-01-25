@@ -306,7 +306,7 @@ class DataNode(object):
         '''Set node data version attribute
         '''
         if not version:
-            version = mgear.anim_picker.__version__
+            version = mgear.anim_picker.version.version
 
         attrPlug = "{}.{}".format(self.name, self.__VERSION_ATTR__)
         cmds.setAttr(attrPlug, k=False, l=False)

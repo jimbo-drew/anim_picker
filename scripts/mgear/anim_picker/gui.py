@@ -18,15 +18,18 @@ import pymel.core as pm
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 # mgear
-from mgear.core import callbackManager, pyqt
+import mgear
+from mgear.core import pyqt
+from mgear.core import callbackManager
 from mgear.vendor.Qt import QtCore, QtWidgets, QtOpenGL, QtGui
 # from PySide2 import QtCore, QtWidgets, QtOpenGL, QtGui
 
 # module
+from . import version
 from . import picker_node
-from mgear.anim_picker.widgets import basic
-from mgear.anim_picker.widgets import picker_widgets
-from mgear.anim_picker.widgets import overlay_widgets
+from .widgets import basic
+from .widgets import picker_widgets
+from .widgets import overlay_widgets
 
 from .handlers import __EDIT_MODE__
 from .handlers import __SELECTION__
@@ -42,6 +45,8 @@ try:
     _CLIPBOARD
 except NameError as e:
     _CLIPBOARD = []
+
+ANIM_PICKER_TITLE = "mGear {m_version} | Anim Picker {ap_version}"
 
 # maya color index
 MAYA_OVERRIDE_COLOR = {
@@ -79,6 +84,11 @@ MAYA_OVERRIDE_COLOR = {
     31: [91, 8, 37]
 }
 
+GROUPBOX_BG_CSS = """QGroupBox {{
+      background-color: rgba{color};
+      border: 0px solid rgba{color};
+}}"""
+
 
 # =============================================================================
 # Dependencies ---
@@ -93,8 +103,8 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
     Had to add z_index support since there was a little z
     conflict when "moving" items to back/front in edit mode
     '''
-    __DEFAULT_SCENE_WIDTH__ = 4000
-    __DEFAULT_SCENE_HEIGHT__ = 4000
+    __DEFAULT_SCENE_WIDTH__ = 6000
+    __DEFAULT_SCENE_HEIGHT__ = 6000
 
     def __init__(self, parent=None):
         QtWidgets.QGraphicsScene.__init__(self, parent=parent)
@@ -122,13 +132,12 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
 
         # Get item boundingBox
         if selection:
-            # scene_rect = self.selectionArea().boundingRect()
             sel_items = self.get_selected_items()
             if not sel_items:
                 return
             scene_rect = QtCore.QRectF()
 
-            #init coordinates with the first element
+            # init coordinates with the first element
             rec = sel_items[0].boundingRect().getCoords()
             x1 = (rec[0] + sel_items[0].x())
             y1 = (rec[1] + sel_items[0].y())
@@ -259,8 +268,8 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
 class GraphicViewWidget(QtWidgets.QGraphicsView):
     '''Graphic view widget that display the "polygons" picker items
     '''
-    __DEFAULT_SCENE_WIDTH__ = 4000
-    __DEFAULT_SCENE_HEIGHT__ = 4000
+    __DEFAULT_SCENE_WIDTH__ = 6000
+    __DEFAULT_SCENE_HEIGHT__ = 6000
 
     def __init__(self,
                  namespace=None,
@@ -296,7 +305,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         self.drag_active = False
         self.pan_active = False
         self.zoom_active = False
-        self.auto_frame_active = False
+        self.auto_frame_active = True
 
         # Disable scroll bars
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -562,11 +571,20 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         Args:
             event (QtCore.QEvent): keyboard event
         """
-        modifiers = event.modifiers()
-        if modifiers == QtCore.Qt.ControlModifier and event.key() == QtCore.Qt.Key_Z:
-            self.undo_move()
-        elif modifiers == QtCore.Qt.ControlModifier and event.key() == QtCore.Qt.Key_Y:
-            self.redo_move()
+        if __EDIT_MODE__.get():
+            modifiers = event.modifiers()
+            if (modifiers == QtCore.Qt.ControlModifier and
+                    event.key() == QtCore.Qt.Key_Z):
+                self.undo_move()
+                event.accept()
+            elif (modifiers == QtCore.Qt.ControlModifier and
+                    event.key() == QtCore.Qt.Key_Y):
+                self.redo_move()
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.ignore()
 
     # undo --------------------------------------------------------------------
 
@@ -1162,7 +1180,7 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
 # class MainDockWindow(QtWidgets.QWidget):
 class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
     __OBJ_NAME__ = "ctrl_picker_window"
-    __TITLE__ = "Anim Picker"
+    __TITLE__ = ANIM_PICKER_TITLE.format(m_version=mgear.getVersion(), ap_version=version.version)
 
     def __init__(self,
                  parent=None,
@@ -1188,6 +1206,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # Setup ui
         self.cb_manager = callbackManager.CallbackManager()
         self.setup()
+        # self.windowHandle().screenChanged.connect
 
     def setup(self):
         '''Setup interface
@@ -1204,11 +1223,6 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # Add window fields
         self.add_character_selector()
         self.add_tab_widget()
-
-        # TODO remove temporary addition of the space otpions
-        # self.spaces_widget = basic.SpaceSwitcher()
-        # self.main_vertical_layout.addWidget(self.spaces_widget)
-        # self.spaces_widget.set_tab_widget(self.tab_widget)
 
         # if the window is not dockable we can control the opacity
         # MayaQWidgetDockableMixin overrides setWindowsOpacity
@@ -1254,6 +1268,8 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
                 self.change_opacity()
                 return True
 
+        # QtCore.QEvent.Type.ScreenChangeInternal
+
         # hide main tab widget for os compatibility
         if QObject in getattr(self, "overlays", []):
             if event.type() == QtCore.QEvent.Type.Show:
@@ -1276,22 +1292,44 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         '''
         self.resize(self.default_width, self.default_height)
 
+    def toggle_character_selector(self, checked):
+        """Toggle the visibility of the character select widget
+        """
+        if checked:
+            self.char_select_widget.show()
+        else:
+            self.char_select_widget.hide()
+
     def add_character_selector(self):
         '''Add Character comboBox selector
         '''
-        # Create layout
-        layout = QtWidgets.QHBoxLayout()
-        self.main_vertical_layout.addLayout(layout)
-
         # Create group box
-        box = QtWidgets.QGroupBox()
-        box.setTitle("Character Selector")
-        box.setFixedHeight(pyqt.dpi_scale(80))
+        box = QtWidgets.QGroupBox("Character Selector")
+        bg_color = self.palette().color(QtGui.QPalette.Window).getRgb()
+        cc_style_sheet = GROUPBOX_BG_CSS.format(color=bg_color)
+        box.setStyleSheet(cc_style_sheet)
+        box.setContentsMargins(0, 0, 0, 0)
+        box.setMinimumHeight(0)
+        box.setMaximumHeight(pyqt.dpi_scale(80))
+        box.setCheckable(True)
+        box.setChecked(True)
+        box.clicked.connect(self.toggle_character_selector)
 
-        layout.addWidget(box)
+        self.char_select_widget = QtWidgets.QWidget()
+        self.char_select_widget.setContentsMargins(0, 5, 0, 0)
+        tmp_layout = QtWidgets.QHBoxLayout(box)
+        tmp_layout.setSpacing(0)
+        tmp_layout.addWidget(self.char_select_widget)
 
-        # Add layout
-        box_layout = QtWidgets.QVBoxLayout(box)
+        # Create layout
+        layout = QtWidgets.QHBoxLayout(self.char_select_widget)
+
+        # Create character picture widget
+        self.pic_widget = basic.SnapshotWidget()
+
+        box_layout = QtWidgets.QVBoxLayout()
+        layout.addLayout(box_layout)
+        layout.addWidget(self.pic_widget, QtCore.Qt.AlignCenter)
 
         # Add combo box
         self.char_selector_cb = basic.CallbackComboBox(
@@ -1317,7 +1355,6 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         if not __EDIT_MODE__.get():
             btns_layout.addWidget(self.checkbox)
 
-
         # About btn
         about_btn = basic.CallbackButton(callback=self.show_about_infos)
         about_btn.setText("?")
@@ -1342,20 +1379,17 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
             # Add New  button
             self.new_char_btn = basic.CallbackButton(callback=self.new_character)
             self.new_char_btn.setText("New")
-            self.new_char_btn.setFixedWidth(40)
+            self.new_char_btn.setFixedWidth(pyqt.dpi_scale(40))
 
             btns_layout.addWidget(self.new_char_btn)
 
             # Add Save  button
             self.save_char_btn = basic.CallbackButton(callback=self.save_character)
             self.save_char_btn.setText("Save")
-            self.save_char_btn.setFixedWidth(40)
+            self.save_char_btn.setFixedWidth(pyqt.dpi_scale(40))
 
             btns_layout.addWidget(self.save_char_btn)
-
-        # Create character picture widget
-        self.pic_widget = basic.SnapshotWidget()
-        layout.addWidget(self.pic_widget)
+        self.main_vertical_layout.addWidget(box)
 
     def add_tab_widget(self, name="default"):
         '''Add control display field
@@ -1460,16 +1494,12 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
             return
 
         size = self.size()
-        # pos = self.pos()
 
         self.about_widget.resize(size)
-        # self.about_widget.move(pos)
 
         self.save_widget.resize(size)
-        # self.save_widget.move(pos)
 
         self.load_widget.resize(size)
-        # self.load_widget.move(pos)
 
         return super(MainDockWindow, self).resizeEvent(event)
 
