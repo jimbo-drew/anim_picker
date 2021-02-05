@@ -15,7 +15,7 @@ import pymel.core as pm
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 # mgear
-# import mgear
+import mgear
 from mgear.core import pyqt
 from mgear.core import callbackManager
 
@@ -90,8 +90,8 @@ GROUPBOX_BG_CSS = """QGroupBox {{
 }}"""
 
 
-_mgear_version = 3
-# _mgear_version = mgear.getVersion()
+_mgear_version = mgear.getVersion()
+
 
 # =============================================================================
 # Dependencies ---
