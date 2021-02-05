@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 # python
 import os
 
@@ -5,7 +10,14 @@ import os
 import maya.cmds as cmds
 
 # mgear
-from mgear.vendor.Qt import QtCore, QtWidgets, QtOpenGL, QtGui
+from mgear.vendor.Qt import QtGui
+from mgear.vendor.Qt import QtCore
+from mgear.vendor.Qt import QtWidgets
+
+# debugging
+# from PySide2 import QtGui
+# from PySide2 import QtCore
+# from PySide2 import QtWidgets
 
 # module
 from mgear.anim_picker import picker_node
@@ -24,11 +36,6 @@ class OverlayWidget(QtWidgets.QWidget):
     Transparent overlay type widget
 
     add resize to parent resetEvent to resize this event window as:
-    #def resizeEvent(self, event):
-    #    self.overlay.resize(self.widget().size())
-    #    self.overlay.move(self.widget().pos())
-    #    event.accept()
-
     '''
 
     def __init__(self, parent=None):
@@ -196,7 +203,7 @@ class SaveOverlayWidget(OverlayWidget):
         '''
         file_path = self.file_path_le.text()
         if file_path:
-            return unicode(file_path)
+            return str(file_path)
         return None
 
     def save_event(self):
@@ -389,17 +396,18 @@ class LoadOverlayWidget(OverlayWidget):
 
     def new_picker_node(self, data, namespace):
         name, ok = QtWidgets.QInputDialog.getText(self,
-                                                  self.tr("New character"),
-                                                  self.tr('Node name'),
+                                                  "New character",
+                                                  "Node name",
                                                   QtWidgets.QLineEdit.Normal,
-                                                  self.tr('PICKER_DATA'))
+                                                  "PICKER_DATA")
+
         if not (ok and name):
             return
 
         # Create new data node
         if namespace != "Root" and cmds.namespace(ex=namespace):
             name = "{}:{}".format(namespace, name)
-        data_node = picker_node.DataNode(name=unicode(name))
+        data_node = picker_node.DataNode(name=str(name))
         data_node.create()
         data_node.write_data(data=data)
         data_node.read_data()

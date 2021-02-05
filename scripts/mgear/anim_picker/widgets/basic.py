@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 # python
 import os
 import platform
@@ -6,7 +11,14 @@ import platform
 import maya.cmds as cmds
 
 # mgear
-from mgear.vendor.Qt import QtCore, QtWidgets, QtGui
+from mgear.vendor.Qt import QtGui
+from mgear.vendor.Qt import QtCore
+from mgear.vendor.Qt import QtWidgets
+
+# debugging
+# from PySide2 import QtGui
+# from PySide2 import QtCore
+# from PySide2 import QtWidgets
 
 # module
 from mgear.core import pyqt
@@ -270,7 +282,7 @@ class CtrlListWidgetItem(QtWidgets.QListWidgetItem):
     def node(self):
         '''Return a usable string for maya instead of a QString
         '''
-        return unicode(self.text())
+        return str(self.text())
 
     def node_exists(self):
         '''Will check that the node from "text" exists
@@ -338,7 +350,7 @@ class BackgroundWidget(QtWidgets.QLabel):
             path = None
             self.background = None
         else:
-            self.background = unicode(path)
+            self.background = str(path)
 
         # Use stylesheet rather than pixmap for proper resizing support
         self._set_stylesheet_background()

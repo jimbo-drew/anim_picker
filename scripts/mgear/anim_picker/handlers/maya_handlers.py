@@ -1,8 +1,10 @@
-# Copyright (c) 2018 Guillaume Barlier
-# This file is part of "anim_picker" and covered by MIT,
-# read LICENSE.md and COPYING.md for details.
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 import sys
+
 from maya import cmds
 from maya import OpenMaya
 
@@ -124,13 +126,13 @@ def reset_node_attributes(node, attr="rigBindPose"):
             cmds.setAttr("{}.{}".format(node, attr_key), attr_values[attr_key])
         except Exception:
             msg = "reset_node_attributes -> failed to set attribute '{}.{}' \
-            to {}".format(node, attr, unicode(attr_values[attr_key]))
+            to {}".format(node, attr, str(attr_values[attr_key]))
             sys.stderr.write(msg)
 
     return True
 
 
-class SelectionCheck():
+class SelectionCheck(object):
     def __init__(self):
         self.sel = OpenMaya.MSelectionList()
 

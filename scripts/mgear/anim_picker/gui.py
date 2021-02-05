@@ -1,7 +1,7 @@
-# Copyright (c) 2018 Guillaume Barlier
-# This file is part of "anim_picker" and covered by MIT,
-# read LICENSE.md and COPYING.md for details.
-# PyQt4 user interface for anim_picker
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 # python
 import os
@@ -11,14 +11,24 @@ from functools import partial
 # dcc
 from maya import cmds
 import pymel.core as pm
+
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 # mgear
 import mgear
 from mgear.core import pyqt
 from mgear.core import callbackManager
-from mgear.vendor.Qt import QtCore, QtWidgets, QtOpenGL, QtGui
-# from PySide2 import QtCore, QtWidgets, QtOpenGL, QtGui
+
+from mgear.vendor.Qt import QtGui
+from mgear.vendor.Qt import QtCore
+from mgear.vendor.Qt import QtOpenGL
+from mgear.vendor.Qt import QtWidgets
+
+# debugging
+# from PySide2 import QtGui
+# from PySide2 import QtCore
+# from PySide2 import QtOpenGL
+# from PySide2 import QtWidgets
 
 # module
 from . import version
@@ -27,14 +37,8 @@ from .widgets import basic
 from .widgets import picker_widgets
 from .widgets import overlay_widgets
 
-from handlers import __EDIT_MODE__
-from handlers import __SELECTION__
-
-# debugging
-# reload(basic)
-# reload(picker_node)
-# reload(picker_widgets)
-# reload(overlay_widgets)
+from .handlers import __EDIT_MODE__
+from .handlers import __SELECTION__
 
 # constants -------------------------------------------------------------------
 try:
@@ -84,6 +88,9 @@ GROUPBOX_BG_CSS = """QGroupBox {{
       background-color: rgba{color};
       border: 0px solid rgba{color};
 }}"""
+
+
+_mgear_version = mgear.getVersion()
 
 
 # =============================================================================
@@ -187,7 +194,7 @@ class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
         '''
         picker_items = []
         # Filter picker items (from handles etc)
-        for item in self.items():
+        for item in list(self.items()):
             if not isinstance(item, picker_widgets.PickerItem):
                 continue
             picker_items.append(item)
@@ -440,7 +447,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
         # add moved pickers to undo_move_order list ---------------------------
         if not self.drag_active and self.__move_prompt:
-            for picker_uuid in self.tmp_picker_pos_info.keys():
+            for picker_uuid in list(self.tmp_picker_pos_info.keys()):
                 picker = self.scene().get_picker_by_uuid(picker_uuid)
                 if picker is None:
                     continue
@@ -534,7 +541,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             return
         if self.undo_move_order_index > 0:
             self.undo_move_order_index = self.undo_move_order_index - 1
-        for picker_uuid, undo_pos in self.undo_move_order[self.undo_move_order_index].iteritems():
+        for picker_uuid, undo_pos in self.undo_move_order[self.undo_move_order_index].items():
             picker = self.scene().get_picker_by_uuid(picker_uuid)
             if not picker:
                 continue
@@ -551,7 +558,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         if self.undo_move_order_index == -1:
             return
         if self.undo_move_order_index < undo_len:
-            for picker_uuid, undo_pos in self.undo_move_order[self.undo_move_order_index].iteritems():
+            for picker_uuid, undo_pos in self.undo_move_order[self.undo_move_order_index].items():
                 picker = self.scene().get_picker_by_uuid(picker_uuid)
                 if not picker:
                     continue
@@ -825,7 +832,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
     def toggle_all_handles_event(self, event=None):
         new_status = None
-        for item in self.scene().items():
+        for item in list(self.scene().items()):
             # Skip non picker items
             if not isinstance(item, picker_widgets.PickerItem):
                 continue
@@ -860,7 +867,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         '''
         if not path:
             return
-        path = unicode(path)
+        path = str(path)
 
         # Check that path exists
         if not (path and os.path.exists(path)):
@@ -926,7 +933,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         '''Return scene picker items in proper order (back to front)
         '''
         items = []
-        for item in self.scene().items():
+        for item in list(self.scene().items()):
             # Skip non picker graphic items
             if not isinstance(item, picker_widgets.PickerItem):
                 continue
@@ -1080,10 +1087,10 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
 
         # Open input window
         name, ok = QtWidgets.QInputDialog.getText(self,
-                                                  self.tr("Tab name"),
-                                                  self.tr('New name'),
+                                                  "Tab name",
+                                                  "New name",
                                                   QtWidgets.QLineEdit.Normal,
-                                                  self.tr(self.tabText(index)))
+                                                  self.tabText(index))
         if not (ok and name):
             return
 
@@ -1095,10 +1102,10 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
         '''
         # Open input window
         name, ok = QtWidgets.QInputDialog.getText(self,
-                                                  self.tr("Create new tab"),
-                                                  self.tr("Tab name"),
+                                                  "Create new tab",
+                                                  "Tab name",
                                                   QtWidgets.QLineEdit.Normal,
-                                                  self.tr(""))
+                                                  "")
         if not (ok and name):
             return
 
@@ -1154,7 +1161,7 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
         '''
         data = []
         for i in range(self.count()):
-            name = unicode(self.tabText(i))
+            name = str(self.tabText(i))
             tab_data = self.widget(i).get_data()
             data.append({"name": name, "data": tab_data})
         return data
@@ -1176,7 +1183,7 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
 # class MainDockWindow(QtWidgets.QWidget):
 class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
     __OBJ_NAME__ = "ctrl_picker_window"
-    __TITLE__ = ANIM_PICKER_TITLE.format(m_version=mgear.getVersion(), ap_version=version.version)
+    __TITLE__ = ANIM_PICKER_TITLE.format(m_version=_mgear_version, ap_version=version.version)
 
     def __init__(self,
                  parent=None,
@@ -1619,10 +1626,10 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         '''
         # Open input window
         name, ok = QtWidgets.QInputDialog.getText(self,
-                                                  self.tr("New character"),
-                                                  self.tr('Node name'),
+                                                  'New character',
+                                                  'Node name',
                                                   QtWidgets.QLineEdit.Normal,
-                                                  self.tr('PICKER_DATA'))
+                                                  'PICKER_DATA')
         if not (ok and name):
             return
 
@@ -1631,7 +1638,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
             return
 
         # Create new data node
-        data_node = picker_node.DataNode(name=unicode(name))
+        data_node = picker_node.DataNode(name=str(name))
         data_node.create()
         self.refresh()
         self.make_node_active(data_node)
