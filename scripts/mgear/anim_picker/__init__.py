@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 
 from . import gui
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 
 # =============================================================================

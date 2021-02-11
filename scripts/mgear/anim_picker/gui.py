@@ -319,6 +319,9 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         self.setBackgroundBrush(brush)
         self.background_image = None
         self.background_image_path = None
+        self.bg_ui = None
+
+        self.fit_margin = 8
 
         # # undo list ---------------------------------------------------------
         self.undo_move_order = []
@@ -652,7 +655,12 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             background_action.triggered.connect(self.set_background_event)
             menu.addAction(background_action)
 
-            reset_background_action = QtWidgets.QAction("Reset background",
+            background_size_action = QtWidgets.QAction("Background Size",
+                                                       None)
+            background_size_action.triggered.connect(self.background_options)
+            menu.addAction(background_size_action)
+
+            reset_background_action = QtWidgets.QAction("Remove background",
                                                         None)
             func = self.reset_background_event
             reset_background_action.triggered.connect(func)
@@ -697,7 +705,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
     def fit_scene_content(self):
         '''Will fit scene content to view, by scaling it
         '''
-        scene_rect = self.scene().get_bounding_rect(margin=8)
+        scene_rect = self.scene().get_bounding_rect(margin=self.fit_margin)
         self.fitInView(scene_rect, QtCore.Qt.KeepAspectRatio)
 
     def set_auto_frame_view(self):
@@ -711,7 +719,8 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
     def fit_selection_content(self):
         '''Will fit the selected item to view, by scaling it
         '''
-        scene_rect = self.scene().get_bounding_rect(margin=8, selection=True)
+        scene_rect = self.scene().get_bounding_rect(margin=self.fit_margin,
+                                                    selection=True)
         if scene_rect:
             self.fitInView(scene_rect, QtCore.Qt.KeepAspectRatio)
 
@@ -882,10 +891,27 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         # Set scene size to background picture
         width = self.background_image.width()
         height = self.background_image.height()
+
         self.scene().set_size(width, height)
 
         # Update display
         self.fit_scene_content()
+
+    def background_options(self):
+        tabWidget = self.parent().parent()
+        # Delete old window
+        if self.bg_ui:
+            try:
+                self.bg_ui.close()
+                self.bg_ui.deleteLater()
+            except Exception:
+                pass
+        if not tabWidget.currentWidget().get_background(0):
+            cmds.warning("Current view has no background!")
+            return
+        self.bg_ui = basic.BackgroundOptionsDialog(tabWidget, self)
+        self.bg_ui.show()
+        self.bg_ui.raise_()
 
     def set_background_event(self, event=None):
         '''Set background image pick dialog window
@@ -916,6 +942,91 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
         # Update display
         self.fit_scene_content()
+
+    def resize_background_image(self,
+                                width,
+                                height,
+                                keepAspectRatio=False,
+                                auto_update=True):
+        """resize the background image if one is set
+
+        Args:
+            width (int): desired width
+            height (int): desired height
+            keepAspectRatio (bool, optional): scale image to fit aspect ratio
+            auto_update (bool, optional): update the scene view
+
+        Returns:
+            None: none
+        """
+        if not self.background_image:
+            return
+
+        current_width = self.background_image.size().width()
+        current_height = self.background_image.size().height()
+        if current_width == width and current_height == height:
+            return
+
+        if keepAspectRatio:
+            if current_width != width:
+                aspect_size = self.background_image.scaledToWidth(width).size()
+                width, height = aspect_size.width(), aspect_size.height()
+            elif current_height != height:
+                aspect_size = self.background_image.scaledToHeight(height).size()
+                width, height = aspect_size.width(), aspect_size.height()
+        # TODO find if this is the most efficient way to achieve this
+        self.background_image = self.background_image.scaled(width, height)
+
+        if auto_update:
+            self.scene().set_size(width, height)
+            # Update display
+            self.fit_scene_content()
+
+    def set_background_width(self, width, keepAspectRatio=True):
+        """convenience function for setting width on bg image
+
+        Args:
+            width (int): desired width
+            keepAspectRatio (bool, optional): force aspect ration
+
+        Returns:
+            None: None
+        """
+        if not self.background_image:
+            return
+        current_height = self.background_image.size().height()
+        self.resize_background_image(width,
+                                     current_height,
+                                     keepAspectRatio=keepAspectRatio)
+
+    def set_background_height(self, height, keepAspectRatio=True):
+        """convenience function for setting height on bg image
+
+        Args:
+            height (int): desired height
+            keepAspectRatio (bool, optional): force aspect ration
+
+        Returns:
+            None: None
+        """
+        if not self.background_image:
+            return
+        current_width = self.background_image.size().width()
+        self.resize_background_image(current_width,
+                                     height,
+                                     keepAspectRatio=keepAspectRatio)
+
+    def get_background_size(self):
+        """get bg image in Qt.QSize
+
+        Returns:
+            Qt.QSize: current size of bg
+        """
+        bg_image = self.get_background(0)
+        if bg_image:
+            return bg_image.size()
+        else:
+            return QtCore.QSize(0, 0)
 
     def get_background(self, index):
         '''Return background for tab index
@@ -954,6 +1065,7 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
         # Add background to data
         if self.background_image_path:
             data["background"] = self.background_image_path
+            data["background_size"] = self.get_background_size().toTuple()
 
         # Add items to data
         items = []
@@ -971,8 +1083,12 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
         # Set backgraound picture
         background = data.get("background", None)
+        background_size = data.get("background_size", None)
         if background:
             self.set_background(background)
+            if background_size:
+                self.resize_background_image(background_size[0],
+                                             background_size[1])
 
         # Add items to view
         for item_data in data.get("items", []):
@@ -1209,7 +1325,6 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # Setup ui
         self.cb_manager = callbackManager.CallbackManager()
         self.setup()
-        # self.windowHandle().screenChanged.connect
 
     def setup(self):
         '''Setup interface

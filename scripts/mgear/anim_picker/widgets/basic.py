@@ -459,3 +459,82 @@ class SnapshotWidget(BackgroundWidget):
         '''Return snapshot picture path
         '''
         return self.background
+
+
+class BackgroundOptionsDialog(QtWidgets.QDialog):
+    """minimal ui for adjusting the background image"""
+    def __init__(self, tabWidget, parent=None):
+        super(BackgroundOptionsDialog, self).__init__(parent)
+        self.setWindowTitle("Set background size")
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+
+        self.tabWidget = tabWidget
+        self.keep_aspect_ratio = True
+
+        if not self.tabWidget.currentWidget().get_background(0):
+            cmds.warning("Current view has no background!")
+            return None
+
+        width_label = QtWidgets.QLabel("Width")
+        self.width_box = QtWidgets.QSpinBox()
+        self.width_box.setRange(1, 2000)
+        height_label = QtWidgets.QLabel("Height")
+        self.height_box = QtWidgets.QSpinBox()
+        self.height_box.setRange(1, 2000)
+        self.aspect_button = QtWidgets.QPushButton("Maintain Aspect Ratio")
+        self.aspect_button.setCheckable(True)
+        self.aspect_button.setChecked(True)
+        self.reset_button = QtWidgets.QPushButton("Reset Size")
+
+        self.main_layout = QtWidgets.QVBoxLayout(self)
+
+        self.main_layout.addWidget(self.aspect_button)
+        self.main_layout.addWidget(width_label)
+        self.main_layout.addWidget(self.width_box)
+        self.main_layout.addWidget(height_label)
+        self.main_layout.addWidget(self.height_box)
+        self.main_layout.addWidget(self.reset_button)
+
+        self.update_ui_width_value()
+        self.update_ui_height_value()
+
+        self.connectSignals()
+
+    def connectSignals(self):
+        self.aspect_button.clicked.connect(self.toggle_aspect_value)
+        self.width_box.editingFinished.connect(self.update_background_width)
+        self.width_box.editingFinished.connect(self.update_ui_height_value)
+        self.height_box.editingFinished.connect(self.update_background_height)
+        self.height_box.editingFinished.connect(self.update_ui_width_value)
+        self.reset_button.clicked.connect(self.reset_size)
+
+    def update_ui_width_value(self, *args):
+        if not self.keep_aspect_ratio:
+            return
+        size = self.tabWidget.currentWidget().get_background_size()
+        self.width_box.setValue(size.width())
+
+    def update_ui_height_value(self, *args):
+        if not self.keep_aspect_ratio:
+            return
+        size = self.tabWidget.currentWidget().get_background_size()
+        self.height_box.setValue(size.height())
+
+    def update_background_width(self):
+        gfx_view = self.tabWidget.currentWidget()
+        gfx_view.set_background_width(int(self.width_box.text()),
+                                      keepAspectRatio=self.keep_aspect_ratio)
+
+    def update_background_height(self):
+        gfx_view = self.tabWidget.currentWidget()
+        gfx_view.set_background_height(int(self.height_box.text()),
+                                       keepAspectRatio=self.keep_aspect_ratio)
+
+    def toggle_aspect_value(self):
+        self.keep_aspect_ratio = not self.keep_aspect_ratio
+
+    def reset_size(self):
+        path = self.tabWidget.currentWidget().background_image_path
+        self.tabWidget.currentWidget().set_background(path)
+        self.update_ui_width_value()
+        self.update_ui_height_value()
