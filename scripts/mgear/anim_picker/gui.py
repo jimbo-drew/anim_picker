@@ -1410,10 +1410,10 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         '''
         self.resize(self.default_width, self.default_height)
 
-    def toggle_character_selector(self, checked):
+    def toggle_character_selector(self, *args):
         """Toggle the visibility of the character select widget
         """
-        if checked:
+        if self.character_box.isChecked():
             self.char_select_widget.show()
         else:
             self.char_select_widget.hide()
@@ -1422,20 +1422,20 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         '''Add Character comboBox selector
         '''
         # Create group box
-        box = QtWidgets.QGroupBox("Character Selector")
+        self.character_box = QtWidgets.QGroupBox("Character Selector")
         bg_color = self.palette().color(QtGui.QPalette.Window).getRgb()
         cc_style_sheet = GROUPBOX_BG_CSS.format(color=bg_color)
-        box.setStyleSheet(cc_style_sheet)
-        box.setContentsMargins(0, 0, 0, 0)
-        box.setMinimumHeight(0)
-        box.setMaximumHeight(pyqt.dpi_scale(80))
-        box.setCheckable(True)
-        box.setChecked(True)
-        box.clicked.connect(self.toggle_character_selector)
+        self.character_box.setStyleSheet(cc_style_sheet)
+        self.character_box.setContentsMargins(0, 0, 0, 0)
+        self.character_box.setMinimumHeight(0)
+        self.character_box.setMaximumHeight(pyqt.dpi_scale(80))
+        self.character_box.setCheckable(True)
+        self.character_box.setChecked(True)
+        self.character_box.clicked.connect(self.toggle_character_selector)
 
         self.char_select_widget = QtWidgets.QWidget()
         self.char_select_widget.setContentsMargins(0, 5, 0, 0)
-        tmp_layout = QtWidgets.QHBoxLayout(box)
+        tmp_layout = QtWidgets.QHBoxLayout(self.character_box)
         tmp_layout.setSpacing(0)
         tmp_layout.addWidget(self.char_select_widget)
 
@@ -1507,7 +1507,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
             self.save_char_btn.setFixedWidth(pyqt.dpi_scale(40))
 
             btns_layout.addWidget(self.save_char_btn)
-        self.main_vertical_layout.addWidget(box)
+        self.main_vertical_layout.addWidget(self.character_box)
 
     def add_tab_widget(self, name="default"):
         '''Add control display field
