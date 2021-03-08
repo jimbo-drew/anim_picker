@@ -22,6 +22,7 @@ from mgear.core import callbackManager
 from mgear.vendor.Qt import QtGui
 from mgear.vendor.Qt import QtCore
 from mgear.vendor.Qt import QtOpenGL
+from mgear.vendor.Qt import QtCompat
 from mgear.vendor.Qt import QtWidgets
 
 # debugging
@@ -46,7 +47,7 @@ try:
 except NameError as e:
     _CLIPBOARD = []
 
-ANIM_PICKER_TITLE = "mGear {m_version} | Anim Picker {ap_version}"
+ANIM_PICKER_TITLE = "Anim Picker {ap_version} | mGear {m_version}"
 
 # maya color index
 MAYA_OVERRIDE_COLOR = {
@@ -96,6 +97,37 @@ _mgear_version = mgear.getVersion()
 # =============================================================================
 # Dependencies ---
 # =============================================================================
+
+class MayaEvenFilter(QtCore.QObject):
+    """docstring for MayaEvenFilter"""
+    def __init__(self, APUI):
+        super(MayaEvenFilter, self).__init__()
+        self.APUI = APUI
+
+    def eventFilter(self, QObject, event):
+        """
+        """
+        modifiers = None
+        print(67676767)
+        if QtCompat.isValid(self.APUI):
+            modifiers = QtWidgets.QApplication.queryKeyboardModifiers()
+            auto_state = self.APUI.auto_opacity_btn.isChecked()
+            if auto_state and modifiers == QtCore.Qt.ShiftModifier:
+                if self.APUI.testAttribute(QtCore.Qt.WA_TransparentForMouseEvents):
+                    pos = QtGui.QCursor().pos()
+                    widgetRect = self.APUI.geometry()
+                    if widgetRect.contains(pos):
+                        self.APUI.set_mouseEvent_passthrough(False)
+            else:
+                pass
+            print(99999)
+        else:
+            try:
+                self.removeEventFilter(self.APUI.parent())
+            except RuntimeError:
+                pass
+
+
 class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
     '''
     Custom QGraphicsScene with x/y axis line options for origin
@@ -1296,8 +1328,8 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
                 view.set_data(tab_content)
 
 
-# class MainDockWindow(QtWidgets.QWidget):
-class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
+class MainDockWindow(QtWidgets.QWidget):
+# class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
     __OBJ_NAME__ = "ctrl_picker_window"
     __TITLE__ = ANIM_PICKER_TITLE.format(m_version=_mgear_version, ap_version=version.version)
 
@@ -1306,7 +1338,9 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
                  edit=False,
                  dockable=True):
         super(MainDockWindow, self).__init__(parent=parent)
+        self.window_parent = parent
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+        self.setWindowFlags(QtCore.Qt.Window)
         self.ready = False
 
         # Window size
@@ -1325,6 +1359,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # Setup ui
         self.cb_manager = callbackManager.CallbackManager()
         self.setup()
+        self.original_flags = self.windowFlags()
 
     def setup(self):
         '''Setup interface
@@ -1364,6 +1399,16 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         # off before everything is created)
         self.ready = True
 
+    def set_mouseEvent_passthrough(self, state):
+        if state:
+            self.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
+            self.setWindowFlags(self.original_flags & QtCore.Qt.WA_TransparentForMouseEvents)
+            self.show()
+        else:
+            self.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, False)
+            self.setWindowFlags(self.original_flags)
+            self.show()
+
     def eventFilter(self, QObject, event):
         """event filter for general override
         current use
@@ -1377,17 +1422,27 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         Returns:
             bool: accepting event or not
         """
+        modifiers = None
+        if self.auto_opacity_btn.isChecked():
+            modifiers = QtWidgets.QApplication.queryKeyboardModifiers()
+
         if event.type() == QtCore.QEvent.Type.Enter:
-            if self.auto_opacity_btn.isChecked():
+            if self.auto_opacity_btn.isChecked() and modifiers == QtCore.Qt.ShiftModifier:
                 self.setWindowOpacity(100)
                 return True
-        elif event.type() == QtCore.QEvent.Type.Leave:
-            if self.auto_opacity_btn.isChecked():
-                self.change_opacity()
-                return True
+
+        else:
+            if event.type() == QtCore.QEvent.Type.Leave:
+                if self.auto_opacity_btn.isChecked():
+                    pos = QtGui.QCursor().pos()
+                    widgetRect = self.geometry()
+                    if not widgetRect.contains(pos):
+                        self.change_opacity()
+                        self.set_mouseEvent_passthrough(True)
+                elif self.testAttribute(QtCore.Qt.WA_TransparentForMouseEvents) and self.auto_opacity_btn.isChecked():
+                    self.set_mouseEvent_passthrough(False)
 
         # QtCore.QEvent.Type.ScreenChangeInternal
-
         # hide main tab widget for os compatibility
         if QObject in getattr(self, "overlays", []):
             if event.type() == QtCore.QEvent.Type.Show:
@@ -1402,8 +1457,14 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
     def change_opacity(self):
         """Change the  windows opacity
         """
-        o = self.opacity_slider.value()
-        self.setWindowOpacity(o / 100.0)
+        if self.auto_opacity_btn.isChecked():
+            print("onnnnn")
+            self.set_mouseEvent_passthrough(True)
+            if self.window_parent:
+                apevent = MayaEvenFilter(self)
+                self.window_parent.installEventFilter(apevent)
+        opacity_value = self.opacity_slider.value()
+        self.setWindowOpacity(opacity_value / 100.0)
 
     def reset_default_size(self):
         '''Reset window size to default
@@ -1915,7 +1976,7 @@ class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
 # =============================================================================
 # Load user interface function
 # =============================================================================
-def load(edit=False, dockable=True):
+def load(edit=False, dockable=False):
     """To launch the ui and not get the same instance
 
     Returns:
@@ -1926,14 +1987,8 @@ def load(edit=False, dockable=True):
         dockable (bool, optional): Description
 
     """
-    # global ANIM_PKR_UI
-    # if 'ANIM_PKR_UI' in globals():
-    #     try:
-    #         ANIM_PKR_UI.close()
-    #         ANIM_PKR_UI.deleteLater()
-    #     except Exception:
-    #         pass
-    ANIM_PKR_UI = MainDockWindow(parent=None,
+
+    ANIM_PKR_UI = MainDockWindow(parent=pyqt.maya_main_window(),
                                  edit=edit,
                                  dockable=dockable)
 
