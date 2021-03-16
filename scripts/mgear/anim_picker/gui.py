@@ -32,6 +32,7 @@ from mgear.vendor.Qt import QtWidgets
 # from PySide2 import QtWidgets
 
 # module
+from . import menu
 from . import version
 from . import picker_node
 from .widgets import basic
@@ -95,37 +96,42 @@ _mgear_version = mgear.getVersion()
 
 
 # =============================================================================
-# Dependencies ---
+# Classes
 # =============================================================================
 
-class MayaEvenFilter(QtCore.QObject):
-    """docstring for MayaEvenFilter"""
-    def __init__(self, APUI):
-        super(MayaEvenFilter, self).__init__()
-        self.APUI = APUI
+class APPassthroughEventFilter(QtCore.QObject):
+    """AnimPicker eventFilter for MayaMainWindow when enabling
+    click passthrough for the GUI.
+    """
+    # Animpicker gui reference
+    APUI = None
 
     def eventFilter(self, QObject, event):
-        """
+        """Filter for changing the windowFlags on the animPicker gui
         """
         modifiers = None
-        print(67676767)
         if QtCompat.isValid(self.APUI):
             modifiers = QtWidgets.QApplication.queryKeyboardModifiers()
             auto_state = self.APUI.auto_opacity_btn.isChecked()
+            flag_state = self.APUI.testAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
             if auto_state and modifiers == QtCore.Qt.ShiftModifier:
-                if self.APUI.testAttribute(QtCore.Qt.WA_TransparentForMouseEvents):
+                # if the window is passthrough enabled
+                if flag_state:
                     pos = QtGui.QCursor().pos()
                     widgetRect = self.APUI.geometry()
                     if widgetRect.contains(pos):
                         self.APUI.set_mouseEvent_passthrough(False)
+                # if the window is passthrough enabled and the feature disabled
+            elif flag_state and not menu.get_option_var_passthrough_state():
+                self.APUI.set_mouseEvent_passthrough(False)
             else:
                 pass
-            print(99999)
         else:
             try:
-                self.removeEventFilter(self.APUI.parent())
+                self.deleteLater()
             except RuntimeError:
                 pass
+        return super(APPassthroughEventFilter, self).eventFilter(QObject, event)
 
 
 class OrderedGraphicsScene(QtWidgets.QGraphicsScene):
@@ -548,6 +554,9 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
     def wheelEvent(self, event):
         '''Wheel event to add zoom support
         '''
+        if self.testAttribute(QtCore.Qt.WA_TransparentForMouseEvents):
+            print("skip zoom")
+            return True
         self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
 
         # Run default event
@@ -1331,7 +1340,8 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
 class MainDockWindow(QtWidgets.QWidget):
 # class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
     __OBJ_NAME__ = "ctrl_picker_window"
-    __TITLE__ = ANIM_PICKER_TITLE.format(m_version=_mgear_version, ap_version=version.version)
+    __TITLE__ = ANIM_PICKER_TITLE.format(m_version=_mgear_version,
+                                         ap_version=version.version)
 
     def __init__(self,
                  parent=None,
@@ -1349,8 +1359,8 @@ class MainDockWindow(QtWidgets.QWidget):
         self.default_height = pyqt.dpi_scale(837)
 
         # Default vars
-        self.childs = []
         self.status = False
+        self.childs = []
         self.script_jobs = []
 
         __EDIT_MODE__.set_init(edit)
@@ -1359,7 +1369,11 @@ class MainDockWindow(QtWidgets.QWidget):
         # Setup ui
         self.cb_manager = callbackManager.CallbackManager()
         self.setup()
+
+        # experimental passthrough feature
         self.original_flags = self.windowFlags()
+        self.ap_eventFilter = APPassthroughEventFilter()
+        self.ap_eventFilter.APUI = self
 
     def setup(self):
         '''Setup interface
@@ -1388,6 +1402,7 @@ class MainDockWindow(QtWidgets.QWidget):
             self.auto_opacity_btn = QtWidgets.QPushButton("Auto opacity")
             self.auto_opacity_btn.setCheckable(True)
             self.auto_opacity_btn.toggled.connect(self.change_opacity)
+            self.auto_opacity_btn.toggled.connect(self.create_passthrough_eventFilter)
             self.installEventFilter(self)
             opacity_layout.addWidget(self.opacity_slider)
             opacity_layout.addWidget(self.auto_opacity_btn)
@@ -1399,7 +1414,25 @@ class MainDockWindow(QtWidgets.QWidget):
         # off before everything is created)
         self.ready = True
 
+    def create_passthrough_eventFilter(self):
+        """enable the eventFilter for changing the AP gui windowFlags state
+        """
+        # this feature is beta and is off by default
+        if menu.get_option_var_passthrough_state() == 0 or not self.window_parent:
+            return
+        if self.auto_opacity_btn.isChecked():
+            self.set_mouseEvent_passthrough(True)
+            self.window_parent.installEventFilter(self.ap_eventFilter)
+        else:
+            self.set_mouseEvent_passthrough(False)
+            self.window_parent.removeEventFilter(self.ap_eventFilter)
+
     def set_mouseEvent_passthrough(self, state):
+        """set the state of the passthrough feature for anim picker
+
+        Args:
+            state (bool): enable or disable
+        """
         if state:
             self.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
             self.setWindowFlags(self.original_flags & QtCore.Qt.WA_TransparentForMouseEvents)
@@ -1430,16 +1463,19 @@ class MainDockWindow(QtWidgets.QWidget):
             if self.auto_opacity_btn.isChecked() and modifiers == QtCore.Qt.ShiftModifier:
                 self.setWindowOpacity(100)
                 return True
-
         else:
             if event.type() == QtCore.QEvent.Type.Leave:
-                if self.auto_opacity_btn.isChecked():
+                opacity_state = self.auto_opacity_btn.isChecked()
+                flag_state = self.testAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+                if opacity_state:
                     pos = QtGui.QCursor().pos()
                     widgetRect = self.geometry()
                     if not widgetRect.contains(pos):
                         self.change_opacity()
-                        self.set_mouseEvent_passthrough(True)
-                elif self.testAttribute(QtCore.Qt.WA_TransparentForMouseEvents) and self.auto_opacity_btn.isChecked():
+                        # check the option var if it is enabled
+                        if menu.get_option_var_passthrough_state():
+                            self.set_mouseEvent_passthrough(True)
+                elif flag_state and not opacity_state:
                     self.set_mouseEvent_passthrough(False)
 
         # QtCore.QEvent.Type.ScreenChangeInternal
@@ -1457,12 +1493,6 @@ class MainDockWindow(QtWidgets.QWidget):
     def change_opacity(self):
         """Change the  windows opacity
         """
-        if self.auto_opacity_btn.isChecked():
-            print("onnnnn")
-            self.set_mouseEvent_passthrough(True)
-            if self.window_parent:
-                apevent = MayaEvenFilter(self)
-                self.window_parent.installEventFilter(apevent)
         opacity_value = self.opacity_slider.value()
         self.setWindowOpacity(opacity_value / 100.0)
 
@@ -1635,6 +1665,11 @@ class MainDockWindow(QtWidgets.QWidget):
                 item.edit_window.close()
             except Exception:
                 pass
+
+        try:
+            self.window_parent.removeEventFilter(self.ap_eventFilter)
+        except Exception:
+            pass
 
         # Default close
         # mayaMixin bug that i need to correct for
@@ -1971,6 +2006,18 @@ class MainDockWindow(QtWidgets.QWidget):
         # Update controls for active tab
         for item in self.get_picker_items():
             item.run_selection_check()
+
+
+class MainDockableWindow(MayaQWidgetDockableMixin, MainDockWindow):
+    __OBJ_NAME__ = "ctrl_picker_window"
+    __TITLE__ = ANIM_PICKER_TITLE.format(m_version=_mgear_version,
+                                         ap_version=version.version)
+
+    def __init__(self,
+                 parent=None,
+                 edit=False,
+                 dockable=True):
+        super(MainDockableWindow, self).__init__(parent=parent)
 
 
 # =============================================================================
