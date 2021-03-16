@@ -1343,10 +1343,7 @@ class MainDockWindow(QtWidgets.QWidget):
     __TITLE__ = ANIM_PICKER_TITLE.format(m_version=_mgear_version,
                                          ap_version=version.version)
 
-    def __init__(self,
-                 parent=None,
-                 edit=False,
-                 dockable=True):
+    def __init__(self, parent=None, edit=False, dockable=True):
         super(MainDockWindow, self).__init__(parent=parent)
         self.window_parent = parent
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
@@ -1393,6 +1390,7 @@ class MainDockWindow(QtWidgets.QWidget):
 
         # if the window is not dockable we can control the opacity
         # MayaQWidgetDockableMixin overrides setWindowsOpacity
+        self.auto_opacity_btn = QtWidgets.QPushButton("")
         if not self.is_dockable:
             opacity_layout = QtWidgets.QHBoxLayout()
             self.opacity_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
@@ -2008,10 +2006,8 @@ class MainDockWindow(QtWidgets.QWidget):
             item.run_selection_check()
 
 
+# version of the anim picker ui that uses MayaQWidgetDockableMixin for docking
 class MainDockableWindow(MayaQWidgetDockableMixin, MainDockWindow):
-    __OBJ_NAME__ = "ctrl_picker_window"
-    __TITLE__ = ANIM_PICKER_TITLE.format(m_version=_mgear_version,
-                                         ap_version=version.version)
 
     def __init__(self,
                  parent=None,
@@ -2035,16 +2031,16 @@ def load(edit=False, dockable=False):
 
     """
 
-    ANIM_PKR_UI = MainDockWindow(parent=pyqt.maya_main_window(),
-                                 edit=edit,
-                                 dockable=dockable)
-
     # NOTE: if instedad with set dockable to false the window doesn't get
     # parented to Maya UI
     # TODO: Dockable breaks the interface when docks. For the moment this
     # option is not available from the menu
     if dockable:
+        ANIM_PKR_UI = MainDockableWindow(parent=None,
+                                         edit=edit,
+                                         dockable=dockable)
         ANIM_PKR_UI.show(dockable=True)
     else:
+        ANIM_PKR_UI = MainDockWindow(parent=pyqt.maya_main_window(), edit=edit)
         ANIM_PKR_UI.show()
     return ANIM_PKR_UI
