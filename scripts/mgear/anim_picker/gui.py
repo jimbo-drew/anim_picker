@@ -554,9 +554,8 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
     def wheelEvent(self, event):
         '''Wheel event to add zoom support
         '''
-        if self.testAttribute(QtCore.Qt.WA_TransparentForMouseEvents):
-            print("skip zoom")
-            return True
+        if self.window().testAttribute(QtCore.Qt.WA_TransparentForMouseEvents):
+            return False
         self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
 
         # Run default event
@@ -1338,12 +1337,11 @@ class ContextMenuTabWidget(QtWidgets.QTabWidget):
 
 
 class MainDockWindow(QtWidgets.QWidget):
-# class MainDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
     __OBJ_NAME__ = "ctrl_picker_window"
     __TITLE__ = ANIM_PICKER_TITLE.format(m_version=_mgear_version,
                                          ap_version=version.version)
 
-    def __init__(self, parent=None, edit=False, dockable=True):
+    def __init__(self, parent=None, edit=False, dockable=False):
         super(MainDockWindow, self).__init__(parent=parent)
         self.window_parent = parent
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
@@ -1369,6 +1367,7 @@ class MainDockWindow(QtWidgets.QWidget):
 
         # experimental passthrough feature
         self.original_flags = self.windowFlags()
+        self.passthrough_eventFilter_installed = False
         self.ap_eventFilter = APPassthroughEventFilter()
         self.ap_eventFilter.APUI = self
 
@@ -1400,7 +1399,7 @@ class MainDockWindow(QtWidgets.QWidget):
             self.auto_opacity_btn = QtWidgets.QPushButton("Auto opacity")
             self.auto_opacity_btn.setCheckable(True)
             self.auto_opacity_btn.toggled.connect(self.change_opacity)
-            self.auto_opacity_btn.toggled.connect(self.create_passthrough_eventFilter)
+            self.auto_opacity_btn.toggled.connect(self.toggle_passthrough_eventFilter)
             self.installEventFilter(self)
             opacity_layout.addWidget(self.opacity_slider)
             opacity_layout.addWidget(self.auto_opacity_btn)
@@ -1412,18 +1411,18 @@ class MainDockWindow(QtWidgets.QWidget):
         # off before everything is created)
         self.ready = True
 
-    def create_passthrough_eventFilter(self):
+    def toggle_passthrough_eventFilter(self):
         """enable the eventFilter for changing the AP gui windowFlags state
         """
         # this feature is beta and is off by default
         if menu.get_option_var_passthrough_state() == 0 or not self.window_parent:
             return
         if self.auto_opacity_btn.isChecked():
-            self.set_mouseEvent_passthrough(True)
             self.window_parent.installEventFilter(self.ap_eventFilter)
+            self.passthrough_eventFilter_installed = True
         else:
-            self.set_mouseEvent_passthrough(False)
             self.window_parent.removeEventFilter(self.ap_eventFilter)
+            self.passthrough_eventFilter_installed = False
 
     def set_mouseEvent_passthrough(self, state):
         """set the state of the passthrough feature for anim picker
@@ -1431,10 +1430,12 @@ class MainDockWindow(QtWidgets.QWidget):
         Args:
             state (bool): enable or disable
         """
-        if state:
+        if state and self.passthrough_eventFilter_installed:
             self.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
             self.setWindowFlags(self.original_flags & QtCore.Qt.WA_TransparentForMouseEvents)
             self.show()
+        elif state and not self.passthrough_eventFilter_installed:
+            self.toggle_passthrough_eventFilter()
         else:
             self.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, False)
             self.setWindowFlags(self.original_flags)

@@ -31,21 +31,9 @@ def force_disable_passthrough(*args):
 
     widgets = pyqt.get_top_level_widgets(class_name="MainDockWindow")
     for ap in widgets:
-        if hasattr(ap, "__OBJ_NAME__") and ap.__OBJ_NAME__ == "ctrl_picker_window":
+        if (hasattr(ap, "__OBJ_NAME__") and
+                ap.__OBJ_NAME__ == "ctrl_picker_window"):
             ap.set_mouseEvent_passthrough(False)
-
-
-# def force_enable_passthrough(*args):
-#     """force all the anim picker gui's to disable passthrough feature
-
-#     Args:
-#         *args: n/a
-#     """
-
-#     widgets = pyqt.get_top_level_widgets(class_name="MainDockWindow")
-#     for ap in widgets:
-#         if hasattr(ap, "__OBJ_NAME__") and ap.__OBJ_NAME__ == "ctrl_picker_window":
-#             ap.create_passthrough_eventFilter()
 
 
 def get_option_var_passthrough_state():
