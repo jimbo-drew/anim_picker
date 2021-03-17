@@ -1459,9 +1459,15 @@ class MainDockWindow(QtWidgets.QWidget):
             modifiers = QtWidgets.QApplication.queryKeyboardModifiers()
 
         if event.type() == QtCore.QEvent.Type.Enter:
-            if self.auto_opacity_btn.isChecked() and modifiers == QtCore.Qt.ShiftModifier:
-                self.setWindowOpacity(100)
-                return True
+            shift_state = modifiers == QtCore.Qt.ShiftModifier
+            flag_state = self.testAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+            if self.auto_opacity_btn.isChecked():
+                if flag_state and shift_state:
+                    self.setWindowOpacity(100)
+                    return True
+                elif not flag_state:
+                    self.setWindowOpacity(100)
+                    return True
         else:
             if event.type() == QtCore.QEvent.Type.Leave:
                 opacity_state = self.auto_opacity_btn.isChecked()
