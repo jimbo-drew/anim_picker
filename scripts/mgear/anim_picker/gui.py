@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 # python
 import os
 import copy
+import json
 from functools import partial
 
 # dcc
@@ -17,7 +18,9 @@ from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 # mgear
 import mgear
 from mgear.core import pyqt
+from mgear.core import attribute
 from mgear.core import callbackManager
+
 
 from mgear.vendor.Qt import QtGui
 from mgear.vendor.Qt import QtCore
@@ -91,6 +94,8 @@ GROUPBOX_BG_CSS = """QGroupBox {{
 
 
 _mgear_version = mgear.getVersion()
+
+PICKER_EXTRACTION_NAME = "pickerData_extraction"
 
 
 # =============================================================================
@@ -668,6 +673,26 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
 
             menu.addSeparator()
 
+            msg = "Convert to nurbs curves"
+            convert_picker_to_curves = QtWidgets.QAction(msg, None)
+            func = self.convert_picker_to_curves
+            convert_picker_to_curves.triggered.connect(func)
+            menu.addAction(convert_picker_to_curves)
+
+            msg = "Convert to picker data"
+            convert_curves_to_picker = QtWidgets.QAction(msg, None)
+            func = self.convert_curves_to_picker
+            convert_curves_to_picker.triggered.connect(func)
+            menu.addAction(convert_curves_to_picker)
+
+            msg = "Delete picker nurbs curves"
+            delete_extraction_grp = QtWidgets.QAction(msg, None)
+            func = self.delete_extraction_grp
+            delete_extraction_grp.triggered.connect(func)
+            menu.addAction(delete_extraction_grp)
+
+            menu.addSeparator()
+
         if __EDIT_MODE__.get_main():
             toggle_mode_action = QtWidgets.QAction("Toggle Mode", None)
             toggle_mode_action.triggered.connect(self.toggle_mode_event)
@@ -1147,6 +1172,189 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             y_line = QtCore.QLineF(0, rect.y(),
                                    0, rect.height() + rect.y())
             painter.drawLine(y_line)
+
+    def convert_picker_to_curves(self, factor=0.1, background_fade=0.5, showCVs=True):
+        """Convert the pickernodes from the view into maya curves for easier
+        editing.
+
+        Args:
+            factor (float, optional): scale factor
+            background_fade (float, optional): alpha on the image place
+            showCVs (bool, optional): show the cv pivots
+
+
+        Returns:
+            n/a: n/a
+
+        http://forum.mgear-framework.com/t/sharing-a-couple-of-functions-i-wrote-for-anim-picker/1717
+        """
+        data = self.main_window.get_character_data()
+
+        tab_index = self.main_window.tab_widget.currentIndex()
+        tab_name = self.main_window.tab_widget.tabText(tab_index)
+
+        tab = None
+        # only focus on the current tab
+        for _tab in data["tabs"]:
+            if _tab["name"] == tab_name:
+                tab = _tab
+        if not tab:
+            cmds.warning("No data in picker tab: {}".format(tab_name))
+            return
+
+        # lets not create multiple picker group nodes
+        if pm.objExists(PICKER_EXTRACTION_NAME):
+            grp = pm.PyNode(PICKER_EXTRACTION_NAME)
+        else:
+            grp = pm.group(em=True, n=PICKER_EXTRACTION_NAME)
+
+        # deletes existing tab group and recreates it
+        if pm.objExists(tab["name"]):
+            pm.delete(tab["name"])
+        picker_grp = pm.group(em=True, n=tab["name"], p=grp)
+        if "background" in tab["data"]:
+            ip = pm.imagePlane(n="{}_background".format(tab["name"]))
+            ip[0].tz.set(-1)
+            ip[0].overrideEnabled.set(1)
+            ip[0].overrideDisplayType.set(2)
+            ip[1].alphaGain.set(background_fade)
+            pm.parent(ip[0], picker_grp)
+            q_image = QtGui.QImage(tab["data"]["background"])
+
+            ip[1].imageName.set(tab["data"]["background"])
+            ip[1].width.set(q_image.size().width() * factor)
+            ip[1].height.set(q_image.size().height() * factor)
+
+        for item in tab["data"]["items"]:
+            handles = item["handles"]
+            pos_x, pos_y = item["position"]
+
+            item_curve = pm.circle(d=1, s=len(item["handles"]), ch=False)[0]
+            pm.parent(item_curve, picker_grp)
+            pm.closeCurve(item_curve, ch=False, ps=2, rpo=True)
+            item_curve.displayHandle.set(1)
+            if showCVs:
+                item_curve.getShape().dispCV.set(1)
+
+            q_color = QtGui.QColor(*item["color"])
+            attribute.addColorAttribute(item_curve, "color", q_color.getRgbF()[:3])
+            attribute.addAttribute(item_curve, "alpha", "long", item["color"][3], minValue=0, maxValue=255)
+
+            item_curve.overrideEnabled.set(1)
+            item_curve.overrideRGBColors.set(1)
+            item_curve.color >> item_curve.overrideColorRGB
+            item_curve.rotatePivot >> item_curve.selectHandle
+
+            if "controls" in item.keys():
+                attribute.addAttribute(item_curve,
+                                       "controls",
+                                       "string",
+                                       json.dumps(item["controls"]))
+
+            if "action_mode" in item.keys():
+                attribute.addAttribute(item_curve,
+                                       "action_mode",
+                                       "bool",
+                                       item["action_mode"])
+                attribute.addAttribute(item_curve,
+                                       "action_script",
+                                       "string",
+                                       item["action_script"])
+
+            if "menus" in item.keys():
+                attribute.addAttribute(item_curve,
+                                       "menus",
+                                       "string",
+                                       json.dumps(item["menus"]))
+
+            if "text" in item.keys():
+                attribute.addAttribute(item_curve,
+                                       "text_data",
+                                       "string",
+                                       json.dumps({"text": item["text"],
+                                                   "text_color": item["text_color"],
+                                                   "text_size": item["text_size"]}))
+
+            for i, (x, y) in enumerate(handles):
+                item_curve.getShape().controlPoints[i].set(x * factor, y * factor, 0)
+            item_curve.t.set(pos_x * factor, pos_y * factor, 0)
+
+    def delete_extraction_grp(self):
+        """delete extraction group
+        """
+        try:
+            pm.delete(PICKER_EXTRACTION_NAME)
+        except Exception as e:
+            print(e)
+
+    def convert_curves_to_picker(self, factor=0.1, deleteCurves=False):
+        """get the information from the created picker curves and reset the
+        information on the picker data node the anim picker operates on
+
+        Args:
+            factor (float, optional): scale factor
+            deleteCurves (bool, optional): delete curves
+
+        """
+        grp = pm.PyNode(PICKER_EXTRACTION_NAME)
+        new_data = {"tabs": []}
+        upscale = lambda x, y: [x * (1 / factor), y * (1 / factor)]
+
+        for tab_grp in grp.listRelatives():
+            new_data["tabs"].append({"name": tab_grp.name()})
+            new_data["tabs"][-1]["data"] = {"items": []}
+            bg_imagePlane = tab_grp.listRelatives(type="imagePlane", ad=True)
+            if bg_imagePlane:
+                new_data["tabs"][-1]["data"]["background"] = bg_imagePlane[0].imageName.get()
+
+            for item_curve in [ic for ic in tab_grp.listRelatives() if ic.getShape().type() != "imagePlane"]:
+                item_data = {}
+                if item_curve.hasAttr("action_mode"):
+                    item_data["action_mode"] = True
+                    item_data["action_script"] = item_curve.action_script.get()
+
+                # color
+                q_color = QtGui.QColor()
+                q_color.setRgbF(*item_curve.color.get())
+                q_color.setAlpha(item_curve.alpha.get())
+                item_data["color"] = q_color.getRgb()
+
+                # controls
+                if item_curve.hasAttr("controls"):
+                    item_data["controls"] = json.loads(item_curve.controls.get())
+
+                # position
+                item_data["position"] = upscale(*list(item_curve.getPivots(ws=True))[0][:2])
+
+                # handles
+                item_curve.f.get()
+                handles = []
+                for cv in item_curve.cv[:-1 if item_curve.f.get() == 0 else None]:
+                    x, y = upscale(*cv.getPosition(space="world")[:2])
+                    handles.append([x - item_data["position"][0], y - item_data["position"][1]])
+                item_data["handles"] = handles
+
+                # menus
+                if item_curve.hasAttr("menus"):
+                    item_data["menus"] = json.loads(item_curve.menus.get())
+                # text
+                if item_curve.hasAttr("text_data"):
+                    item_data.update(json.loads(item_curve.text_data.get()))
+
+                new_data["tabs"][-1]["data"]["items"].append(item_data)
+
+        if deleteCurves:
+            self.delete_extraction_grp()
+
+        data_node = self.main_window.get_current_data_node()
+        if not (data_node and data_node.exists()):
+            return True
+        data_node = pm.PyNode(data_node)
+        data_node.picker_datas.set(l=False)
+        data_node.picker_datas.set(json.dumps(new_data).replace("true", "True"))
+        data_node.picker_datas.set(l=True)
+
+        self.main_window.refresh()
 
 
 class ContextMenuTabWidget(QtWidgets.QTabWidget):
