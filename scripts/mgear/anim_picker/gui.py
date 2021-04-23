@@ -44,6 +44,7 @@ from .widgets import overlay_widgets
 
 from .handlers import __EDIT_MODE__
 from .handlers import __SELECTION__
+from six.moves import range
 
 # constants -------------------------------------------------------------------
 try:
@@ -1285,13 +1286,13 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
             item_curve.color >> item_curve.overrideColorRGB
             item_curve.rotatePivot >> item_curve.selectHandle
 
-            if "controls" in item.keys():
+            if "controls" in list(item.keys()):
                 attribute.addAttribute(item_curve,
                                        "controls",
                                        "string",
                                        json.dumps(item["controls"]))
 
-            if "action_mode" in item.keys():
+            if "action_mode" in list(item.keys()):
                 attribute.addAttribute(item_curve,
                                        "action_mode",
                                        "bool",
@@ -1301,13 +1302,13 @@ class GraphicViewWidget(QtWidgets.QGraphicsView):
                                        "string",
                                        item["action_script"])
 
-            if "menus" in item.keys():
+            if "menus" in list(item.keys()):
                 attribute.addAttribute(item_curve,
                                        "menus",
                                        "string",
                                        json.dumps(item["menus"]))
 
-            if "text" in item.keys():
+            if "text" in list(item.keys()):
                 attribute.addAttribute(item_curve,
                                        "text_data",
                                        "string",
@@ -2256,6 +2257,6 @@ def load(edit=False, dockable=False):
                                          dockable=dockable)
         ANIM_PKR_UI.show(dockable=True)
     else:
-        ANIM_PKR_UI = MainDockWindow(parent=pyqt.maya_main_window(), edit=edit)
+        ANIM_PKR_UI = MainDockWindow(parent=pyqt.get_main_window(), edit=edit)
         ANIM_PKR_UI.show()
     return ANIM_PKR_UI
